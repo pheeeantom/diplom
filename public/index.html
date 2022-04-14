@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Test - Blockly</title>
+		<script src="blockly/blockly_compressed.js"></script>
+		<script src="blockly/blocks_compressed.js"></script>
+		<script src="blockly/generators/bml.js"></script>
+		<script src="blockly/msg/ru.js"></script>
+	</head>
+	<body>
+		<div id="blocklyDiv" style="height: 480px; width: 600px;"></div>
+		<!--<xml id="toolbox" style="display: none">
+		    <category name="Text">
+			    <block type="string_length"></block>
+			  </category>
+		</xml>-->
+		<textarea id="textarea">
+		</textarea>
+		<script>
+		/*Blockly.Blocks['string_length'] = {
+			  init: function() {
+			    this.jsonInit(
+					{
+					  "message0": "length of %1",
+					  "args0": [
+					    {
+					      "type": "field_input",
+					      "name":"VALUE"
+					    }
+					  ]
+					}
+			    );
+			  }
+			};
+		  var workspace = Blockly.inject('blocklyDiv',
+		      {toolbox: document.getElementById('toolbox')});
+			function myUpdateFunction(event) {
+			  var code = Blockly.bml.workspaceToCode(workspace);
+			  document.getElementById('textarea').value = code;
+			}
+			workspace.addChangeListener(myUpdateFunction);*/
+			var defaultOptions = {
+			  comments: true,
+			  // ...
+			  toolbox: bmlToolbox,
+			  // ...
+			};
+			var workspace = Blockly.inject('blocklyDiv', defaultOptions);
+			function myUpdateFunction(event) {
+			  var code = bmlGenerator.workspaceToCode(workspace);
+			  document.getElementById('textarea').value = code;
+			}
+			workspace.addChangeListener(myUpdateFunction);
+		</script>
+	</body>
+</html>
