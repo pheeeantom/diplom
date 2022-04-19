@@ -71,8 +71,19 @@
 		  onresize();
 		  Blockly.svgResize(workspace);
 			function myUpdateFunction(event) {
-			  var code = bmlGenerator.workspaceToCode(workspace);
-			  document.getElementById('textarea').value = code;
+				if (event.type == Blockly.Events.BLOCK_MOVE) {
+				    if (workspace.getBlockById(event.blockId).type === "block") {
+				    	let root = workspace.getBlockById(event.blockId).getParent();
+				    	while (root.type !== "group" && root.type !== "model" && root.type !== "location") {
+				    		root = root.getParent();
+				    	}
+				    	if (root.type === "model" || root.type === "location") {
+				    		workspace.getBlockById(event.blockId).previousConnection.disconnect();
+				    	}
+				    }
+				  }	
+			  /*var code = bmlGenerator.workspaceToCode(workspace);
+			  document.getElementById('textarea').value = code;*/
 			}
 			workspace.addChangeListener(myUpdateFunction);
 		</script>
