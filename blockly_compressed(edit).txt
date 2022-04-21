@@ -1,0 +1,117 @@
+module$exports$Blockly$ConnectionChecker.ConnectionChecker.prototype.canConnectWithReason=function(a,b,c,d){
+						/*var rt = "ok";
+						if (a.getSourceBlock().type == 'block') {
+							var child = a.getSourceBlock();
+							var root = b.getSourceBlock();
+							if (a && b) {
+								console.log(root);	
+							}
+							//console.log(root.previousConnection.getSourceBlock());
+							if (root.previousConnection != null) {
+								if (root.previousConnection.getSourceBlock() == child) {
+									while (root.getInputTargetBlock("DO") != child && root != null) {
+							    		child = root.getParent();
+							    		if (child != null) {
+							    			root = child.getParent();
+							    		}
+							    		rt = root.type;
+							    	}
+								}
+							}
+						}*/
+						var failed = false;
+						//console.log(d + "," + c);
+						//if (a.distanceFrom(b) < 15) {
+							var next = a.getSourceBlock();
+							var child = b.getSourceBlock();
+							//console.log(next.type + "," + child.type);
+							var root = child.getParent();
+							/*if (child.getInputTargetBlock("DO") != null)
+								console.log(child.getInputTargetBlock("DO").id);
+							console.log(next.id);*/
+							//console.log(child.getInputTargetBlock("DO"));
+							//console.log(next);
+							//console.log(child.getInputTargetBlock("DO") == null ? 'null' : child.getInputTargetBlock("DO").inputList.__proto__.length);
+							//console.log("child:"+child.type);
+							console.log(c);
+							//console.log(child.getInputTargetBlock("DO"));
+							//console.log(next);
+							console.log("d:" + d + ", dist:" + a.distanceFrom(b));
+							//if (a.distanceFrom(b) < 15) {
+								if (c) {
+									if (/*child.getInputTargetBlock("DO") != null && child.getInputTargetBlock("DO").inputList.__proto__.length == 0*/
+										/*root != null*/
+										//child.getInputTargetBlock("DO") == null ||
+										child.getInputTargetBlock("DO") != null &&
+										child.getInputTargetBlock("DO").xy_.x == 0 &&
+										child.getInputTargetBlock("DO").xy_.y == 0 &&
+										next.xy_.x == 0 && next.xy_.y == 0/* ||
+										(child.getInputTargetBlock("DO") == next)*/) {
+										root = child;
+										//console.log(root == null ? 'null' : root.type);
+										//console.log(root.type + " hello");
+									}
+									else {
+							    		/*if (root.getInputTargetBlock("DO") == child) {
+							    			root = child;
+										}
+										else {*/
+										if (root != null) {
+											//console.log('hello');
+											//console.log(root == null ? 'null' : root.type);
+											while (root.getInputTargetBlock("DO") != child) {
+									    		//console.log(root.getInputTargetBlock("DO"));
+									    		//console.log(root == null ? 'null' : root.type);
+									    		child = child.getParent();
+									    		root = root.getParent();
+									    		if (root == null) {
+									    			break;
+									    		}
+								    		}
+										}
+										//}
+									}
+									console.log(root == null ? 'null' : root.type);
+						    		//console.log(root == null ? 'null' : root.type);
+						    		//console.log(root.type);
+						    		if (root != null) {
+						    			if (!(root.getInputTargetBlock("DO") != null && root.getInputTargetBlock("DO").inputList.__proto__.length == 0)) {
+						    				//console.log(root.type + "," + next.type);
+							    			if (next.type == 'block') {
+							    				if (root.type == 'location' || root.type == 'model') {
+							    					failed = true;
+							    				}
+								    			//console.log('hello');
+											}
+											else {
+												//console.log(a.getSourceBlock().type + "," + b.getSourceBlock().type);
+												while (next.nextConnection.targetConnection != null) {
+													next = next.nextConnection.targetConnection.getSourceBlock();
+													//console.log(next.type);
+											    	//console.log(root.type);
+													if (next.type == 'block' && (root.type == 'location' ||
+														root.type == 'model')) {
+														//console.log(root.type);
+														failed = true;
+														break;
+													}
+												}
+											}
+										}
+						    		}
+									/*else {*/
+
+							    	/*}*/
+								/*if (failed) {
+									b.unhighlight();
+								}*/
+								//console.log(failed);
+							}
+						//}
+					//}
+					//console.log(failed);
+						if (failed) {
+							return module$exports$Blockly$Connection.Connection.REASON_CHECKS_FAILED;
+						}
+				    	var e=this.doSafetyChecks(a,b);return e!==module$exports$Blockly$Connection.Connection.CAN_CONNECT?e:this.doTypeChecks(a,b)?c&&!this.doDragChecks(a,b,d||0)?module$exports$Blockly$Connection.Connection.REASON_DRAG_CHECKS_FAILED:module$exports$Blockly$Connection.Connection.CAN_CONNECT:module$exports$Blockly$Connection.Connection.REASON_CHECKS_FAILED};
+				    //}

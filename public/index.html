@@ -72,16 +72,243 @@
 		  Blockly.svgResize(workspace);
 			function myUpdateFunction(event) {
 				if (event.type == Blockly.Events.BLOCK_MOVE) {
-				    if (workspace.getBlockById(event.blockId).type === "block") {
-				    	let root = workspace.getBlockById(event.blockId).getParent();
-				    	while (root.type !== "group" && root.type !== "model" && root.type !== "location") {
-				    		root = root.getParent();
+					if (workspace.getBlockById(event.blockId) != null
+						&& (workspace.getBlockById(event.blockId).type === "block"
+						|| workspace.getBlockById(event.blockId).type === "set")) {
+						//console.log('kkk');
+						let child = workspace.getBlockById(event.blockId);
+				    	let root = child.getParent();
+				    	if (root != null) {
+					    	while (root != null && root.getInputTargetBlock("DO") != child) {
+					    		child = child.getParent();
+					    		root = child.getParent();
+					    	}
+				    		if (workspace.getBlockById(event.blockId).type === "block") {
+				    			if (root != null && (root.type === "model" || root.type === "location")) {
+					    			workspace.getBlockById(event.blockId).previousConnection.disconnect();
+					    		}
+				    		}
+				    		if (workspace.getBlockById(event.blockId).type === "set") {
+				    			console.log('hello');
+				    			var next = workspace.getBlockById(event.blockId);
+				    			while (next.nextConnection.targetConnection != null) {
+									next = next.nextConnection.targetConnection.getSourceBlock();
+									//console.log(next.type);
+							    	//console.log(root.type);
+									if (root != null
+										&& (next.type == 'block' && (root.type == 'location' ||
+										root.type == 'model'))) {
+										//console.log(root.type);
+										console.log('hello0');
+										workspace.getBlockById(event.blockId).previousConnection.disconnect();
+										break;
+									}
+								}
+				    		}
 				    	}
-				    	if (root.type === "model" || root.type === "location") {
-				    		workspace.getBlockById(event.blockId).previousConnection.disconnect();
-				    	}
-				    }
-				  }	
+					    	/*let root = workspace.getBlockById(event.blockId).getParent();
+					    	while (root.type !== "group" && root.type !== "model" && root.type !== "location") {
+					    		root = root.getParent();
+					    	}
+					    	if (root.type === "model" || root.type === "location") {
+					    		workspace.getBlockById(event.blockId).previousConnection.disconnect();
+					    	}*/
+					    	/*let root = workspace.getBlockById(event.blockId);
+					    	while (root.getOnlyValueConnection_() === null) {
+					    		root = root.getParent();
+					    	}*/
+					}
+					var fileAttrs = [
+						"attr_block_path",
+						"attr_block_mimes"
+					];
+					var imageAttrs = [
+						"attr_block_width",
+						"attr_block_height",
+						"attr_block_resize"
+					];
+					var archiveAttrs = [
+						"attr_block_method",
+						"attr_block_ratio",
+						"attr_block_comment",
+						"attr_block_unpacked_size"
+					];
+					var warningAttrs = fileAttrs.concat(imageAttrs).concat(archiveAttrs);
+					var imageAttrs = fileAttrs.concat(imageAttrs);
+					var archiveAttrs = fileAttrs.concat(archiveAttrs);
+					if (workspace.getBlockById(event.blockId) != null
+						&& workspace.getBlockById(event.blockId).type == "attr_block_type") {
+						//console.log('HELLO');
+						var next = workspace.getBlockById(event.blockId);
+						while (next.nextConnection.targetConnection != null) {
+							next = next.nextConnection.targetConnection.getSourceBlock();
+							//console.log(next.type);
+					    	//console.log(root.type);
+							if (!((workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "file"
+								&& fileAttrs.includes(next.type))
+								|| (workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "image"
+								&& imageAttrs.includes(next.type))
+								|| (workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "archive"
+								&& archiveAttrs.includes(next.type)))
+								&& (!(workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "string"
+									|| workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "number")
+								&& warningAttrs.includes(next.type)
+								|| ((workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "string"
+									|| workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "number") && warningAttrs.includes(next.type)))) {
+								//console.log(root.type);
+								console.log('hello1');
+								workspace.getBlockById(event.blockId).nextConnection.disconnect();
+								/*var prevConn = workspace.getBlockById(event.blockId).previousConnection.targetConnection.getSourceBlock().nextConnection;
+								workspace.getBlockById(event.blockId).previousConnection.disconnect();
+								if (workspace.getBlockById(event.blockId).nextConnection.targetConnection != null) {
+									var nextConn = workspace.getBlockById(event.blockId).nextConnection;
+									workspace.getBlockById(event.blockId).nextConnection.disconnect();
+									prevConn.connect(nextConn);
+								}*/
+								//console.log('hello');
+								return;
+							}
+						}
+						next = workspace.getBlockById(event.blockId);
+						while (next.previousConnection.targetConnection != null
+							&& next.previousConnection.targetConnection.getSourceBlock().type != "block"
+							&& next.previousConnection.targetConnection.getSourceBlock().type != "set") {
+							//console.log('hello');
+							next = next.previousConnection.targetConnection.getSourceBlock();
+							//console.log(next.type);
+					    	//console.log(root.type);
+							if (!((workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "file"
+								&& fileAttrs.includes(next.type))
+								|| (workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "image"
+								&& imageAttrs.includes(next.type))
+								|| (workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "archive"
+								&& archiveAttrs.includes(next.type)))
+								&& (!(workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "string"
+									|| workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "number")
+								&& warningAttrs.includes(next.type)
+								|| ((workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "string"
+									|| workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "number") && warningAttrs.includes(next.type)))) {
+								console.log('hello2');
+								//console.log(root.type);
+								workspace.getBlockById(event.blockId).previousConnection.disconnect();
+								/*var prevConn = workspace.getBlockById(event.blockId).previousConnection.targetConnection.getSourceBlock().nextConnection;
+								workspace.getBlockById(event.blockId).previousConnection.disconnect();
+								if (workspace.getBlockById(event.blockId).nextConnection.targetConnection != null) {
+									var nextConn = workspace.getBlockById(event.blockId).nextConnection;
+									workspace.getBlockById(event.blockId).nextConnection.disconnect();
+									prevConn.connect(nextConn);
+								}*/
+								//console.log('hello');
+								return;
+							}
+						}
+					}
+					if (workspace.getBlockById(event.blockId) != null
+						&& warningAttrs.includes(workspace.getBlockById(event.blockId).type)) {
+						//console.log('hello1');
+						var hasName = false; 
+						var next = workspace.getBlockById(event.blockId);
+						while (next.nextConnection.targetConnection != null) {
+							next = next.nextConnection.targetConnection.getSourceBlock();
+							//console.log(next.type);
+					    	//console.log(root.type);
+							if (next.type == "attr_block_type") {
+								hasName = true;
+								if (!((next.inputList[0].fieldRow[1].getValue() == "file"
+									&& fileAttrs.includes(workspace.getBlockById(event.blockId).type))
+									|| (next.inputList[0].fieldRow[1].getValue() == "image"
+									&& imageAttrs.includes(workspace.getBlockById(event.blockId).type))
+									|| (next.inputList[0].fieldRow[1].getValue() == "archive"
+									&& archiveAttrs.includes(workspace.getBlockById(event.blockId).type)))
+									&& (!(next.inputList[0].fieldRow[1].getValue() == "string"
+										|| next.inputList[0].fieldRow[1].getValue() == "number")
+									&& warningAttrs.includes(workspace.getBlockById(event.blockId).type)
+									|| ((next.inputList[0].fieldRow[1].getValue() == "string"
+									|| next.inputList[0].fieldRow[1].getValue() == "number") && warningAttrs.includes(workspace.getBlockById(event.blockId).type)))) {
+									//console.log(root.type);
+									console.log('hello3');
+									workspace.getBlockById(event.blockId).nextConnection.disconnect();
+									/*if (workspace.getBlockById(event.blockId).nextConnection.targetConnection != null)
+										workspace.getBlockById(event.blockId).nextConnection.disconnect();*/
+									/*var prevConn = workspace.getBlockById(event.blockId).previousConnection.targetConnection.getSourceBlock().nextConnection;
+									workspace.getBlockById(event.blockId).previousConnection.disconnect();
+									if (workspace.getBlockById(event.blockId).nextConnection.targetConnection != null) {
+										var nextConn = workspace.getBlockById(event.blockId).nextConnection;
+										workspace.getBlockById(event.blockId).nextConnection.disconnect();
+										prevConn.connect(nextConn);
+									}*/
+									//console.log('hello');
+									return;
+								}
+							}
+						}
+						next = workspace.getBlockById(event.blockId);
+						//console.log(next.inputList[0].fieldRow[1].getValue());
+						while (next.previousConnection.targetConnection != null
+							&& next.previousConnection.targetConnection.getSourceBlock().type != "block"
+							&& next.previousConnection.targetConnection.getSourceBlock().type != "set") {
+							next = next.previousConnection.targetConnection.getSourceBlock();
+							//console.log(next.inputList[0].fieldRow[1].getValue());
+							//console.log(next.type);
+					    	//console.log(root.type);
+							if (next.type == "attr_block_type") {
+								hasName = true;
+								console.log(((next.inputList[0].fieldRow[1].getValue() == "string"
+									|| next.inputList[0].fieldRow[1].getValue() == "number") && warningAttrs.includes(workspace.getBlockById(event.blockId).type)));
+								if (!((next.inputList[0].fieldRow[1].getValue() == "file"
+									&& fileAttrs.includes(workspace.getBlockById(event.blockId).type))
+									|| (next.inputList[0].fieldRow[1].getValue() == "image"
+									&& imageAttrs.includes(workspace.getBlockById(event.blockId).type))
+									|| (next.inputList[0].fieldRow[1].getValue() == "archive"
+									&& archiveAttrs.includes(workspace.getBlockById(event.blockId).type)))
+									&& (!(next.inputList[0].fieldRow[1].getValue() == "string"
+										|| next.inputList[0].fieldRow[1].getValue() == "number")
+									&& warningAttrs.includes(workspace.getBlockById(event.blockId).type)
+									|| ((next.inputList[0].fieldRow[1].getValue() == "string"
+									|| next.inputList[0].fieldRow[1].getValue() == "number") && warningAttrs.includes(workspace.getBlockById(event.blockId).type)))) {
+									//console.log(root.type);
+									console.log('hello4');
+									workspace.getBlockById(event.blockId).previousConnection.disconnect();
+									/*if (workspace.getBlockById(event.blockId).nextConnection.targetConnection != null)
+										workspace.getBlockById(event.blockId).nextConnection.disconnect();*/
+									/*var prevConn = workspace.getBlockById(event.blockId).previousConnection.targetConnection.getSourceBlock().nextConnection;
+									workspace.getBlockById(event.blockId).previousConnection.disconnect();
+									if (workspace.getBlockById(event.blockId).nextConnection.targetConnection != null) {
+										var nextConn = workspace.getBlockById(event.blockId).nextConnection;
+										workspace.getBlockById(event.blockId).nextConnection.disconnect();
+										prevConn.connect(nextConn);
+									}*/
+									//console.log('hello');
+									return;
+								}
+							}
+						}
+						if (!hasName) {
+							console.log('hello5');
+							workspace.getBlockById(event.blockId).previousConnection.disconnect();
+						}
+					}
+				}
+				/*if (event.type == Blockly.Events.BLOCK_DRAG) {
+					var allBlocks = workspace.getAllBlocks(false);
+					for (var i = 0; i < allBlocks.length; i++) {
+						if (allBlocks[i].type == 'block') {
+
+						}
+						if (this.distanceFrom(allBlocks[i]) > distance)
+					}
+				}*/
+				/*if (event.type == Blockly.Events.BLOCK_CHANGE) {
+					if (workspace.getBlockById(event.blockId).type === "text" &&
+						workspace.getBlockById(event.blockId).getParent() === "attr_location") {
+						for (let i = 0; i < workspace.getBlockById(event.blockId).getParent().options.length; i++) {
+							if (workspace.getBlockById(event.blockId).getParent().options[i].enabled) {
+								if 
+							}
+						}
+
+					}
+				}*/
 			  /*var code = bmlGenerator.workspaceToCode(workspace);
 			  document.getElementById('textarea').value = code;*/
 			}
