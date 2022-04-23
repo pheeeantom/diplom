@@ -69,8 +69,84 @@
 		  };
 		  window.addEventListener('resize', onresize, false);
 		  onresize();
+
+		  /*function findDescendants(root, sets) {
+		  	if (root.inputList[3].connection.targetConnection == null) {
+		  		return;
+		  	}
+		  	root = root.inputList[3].connection.targetConnection.getSourceBlock();
+		  	//console.log(root);
+		  	var next = root;
+		  	if (next.type == "set") {
+				sets.push(next);
+			}
+			while (next.nextConnection.targetConnection != null) {
+				next = next.nextConnection.targetConnection.getSourceBlock();
+				if (next.type == "set") {
+					sets.push(next);
+				}
+				findDescendants(next, sets);
+			}
+			//console.log(root);
+		  }*/
+
+		  /*function findIds(set, ids) {
+		  	if ()
+		  	while (set.inputList[2].connection.targetConnection.getSourceBlock()) {
+
+		  	}
+		  }*/
+
+		  var ids = [];
+
+		  function updateId(id) {
+		  	if (id.type == 'attr_set_id') {
+		  		Blockly.Events.fire(new (Blockly.Events.get(Blockly.Events.BLOCK_CHANGE))(id, 'collapsed', null, id.collapsed_, id.inputList[0].fieldRow[1].getValue()));
+		  	}
+		  }
+
 		  Blockly.svgResize(workspace);
 			function myUpdateFunction(event) {
+				if (event.type == Blockly.Events.BLOCK_CHANGE) {
+					if (workspace.getBlockById(event.blockId) != null
+						&& workspace.getBlockById(event.blockId).type === "attr_set_id") {
+						var next = workspace.getBlockById(event.blockId);
+						while (next.previousConnection.targetConnection != null) {
+							next = next.previousConnection.targetConnection.getSourceBlock();
+							if (next.type == "location") {
+								var idsStr = [];
+								for (var i = 0; i < ids.length; i++) {
+									idsStr.push(Object.values(ids[i])[0]);
+								}
+								console.log(idsStr);
+								if (!idsStr.includes(event.newValue)) {
+									workspace.getBlockById(event.blockId).setColour(0);
+								}
+								else {
+									workspace.getBlockById(event.blockId).setColour(180);
+								}
+								break;
+							}
+							if (next.type == "model") {
+								for (var i = 0; i < ids.length; i++) {
+									var obj = ids[i];
+									var name = event.blockId;
+									if (obj[name] !== undefined) {
+										ids.splice(i, 1);
+									}
+								}
+								var obj = {};
+								var name = event.blockId;
+								var val = event.newValue;
+								obj[name] = val;
+								ids.push(obj);
+								break;
+							}
+						}
+					}
+					//console.log(ids);
+				}
+
 				if (event.type == Blockly.Events.BLOCK_MOVE) {
 					if (workspace.getBlockById(event.blockId) != null
 						&& (workspace.getBlockById(event.blockId).type === "block"
@@ -85,11 +161,13 @@
 					    	}
 				    		if (workspace.getBlockById(event.blockId).type === "block") {
 				    			if (root != null && (root.type === "model" || root.type === "location")) {
+				    				console.log('hello-1');
 					    			workspace.getBlockById(event.blockId).previousConnection.disconnect();
+					    			return;
 					    		}
 				    		}
 				    		if (workspace.getBlockById(event.blockId).type === "set") {
-				    			console.log('hello');
+				    			//console.log('hello');
 				    			var next = workspace.getBlockById(event.blockId);
 				    			while (next.nextConnection.targetConnection != null) {
 									next = next.nextConnection.targetConnection.getSourceBlock();
@@ -101,7 +179,7 @@
 										//console.log(root.type);
 										console.log('hello0');
 										workspace.getBlockById(event.blockId).previousConnection.disconnect();
-										break;
+										return;
 									}
 								}
 				    		}
@@ -117,6 +195,62 @@
 					    	while (root.getOnlyValueConnection_() === null) {
 					    		root = root.getParent();
 					    	}*/
+					}
+					workspace.getAllBlocks(false).forEach(block => updateId(block));
+					/*if (workspace.getBlockById(event.blockId) != null
+						&& workspace.getBlockById(event.blockId).type == "attr_set_id") {
+						var next = workspace.getBlockById(event.blockId);
+						while (next.previousConnection.targetConnection != null) {
+							next = next.previousConnection.targetConnection.getSourceBlock();
+							if (next.type == "model") {
+								//console.log('mod');
+								break;
+							}
+							if (next.type == "location") {
+								//console.log('loc');
+								while (next.previousConnection.targetConnection != null) {
+									next = next.previousConnection.targetConnection.getSourceBlock();
+									if (next.type == "model") {
+										if (next.inputList[1].connection.targetConnection != null) {
+											var root = next.inputList[1].connection.targetConnection.getSourceBlock();
+											var sets = [root];
+											next = root;
+											while (next.nextConnection.targetConnection != null) {
+												next = next.nextConnection.targetConnection.getSourceBlock();
+												if (next.type == "set") {
+													sets.push(next);
+												}
+											}
+											//console.log(sets);
+											sets.forEach(set => findDescendants(set, sets));
+											sets.forEach(set => findIds(set, ids));
+											break;
+										}
+									}
+								}
+							}
+						}
+					}*/
+					if (workspace.getBlockById(event.blockId) != null
+						&& workspace.getBlockById(event.blockId).type.startsWith("attr_")) {
+						var next = workspace.getBlockById(event.blockId);
+						while (next.nextConnection.targetConnection != null) {
+							next = next.nextConnection.targetConnection.getSourceBlock();
+							if (next.type == workspace.getBlockById(event.blockId).type) {
+								console.log('hello0.1');
+								workspace.getBlockById(event.blockId).nextConnection.disconnect();
+								return;
+							}
+						}
+						next = workspace.getBlockById(event.blockId);
+						while (next.previousConnection.targetConnection != null) {
+							next = next.previousConnection.targetConnection.getSourceBlock();
+							if (next.type == workspace.getBlockById(event.blockId).type) {
+								console.log('hello0.2');
+								workspace.getBlockById(event.blockId).previousConnection.disconnect();
+								return;
+							}
+						}
 					}
 					var fileAttrs = [
 						"attr_block_path",
