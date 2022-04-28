@@ -111,7 +111,7 @@
 					if (workspace.getBlockById(event.blockId) != null
 						&& workspace.getBlockById(event.blockId).type === "attr_set_id") {
 						var next = workspace.getBlockById(event.blockId);
-						while (next.previousConnection.targetConnection != null) {
+						while (next.previousConnection != null && next.previousConnection.targetConnection != null) {
 							next = next.previousConnection.targetConnection.getSourceBlock();
 							if (next.type == "location") {
 								var idsStr = [];
@@ -169,7 +169,7 @@
 				    		if (workspace.getBlockById(event.blockId).type === "set") {
 				    			//console.log('hello');
 				    			var next = workspace.getBlockById(event.blockId);
-				    			while (next.nextConnection.targetConnection != null) {
+				    			while (next.nextConnection != null && next.nextConnection.targetConnection != null) {
 									next = next.nextConnection.targetConnection.getSourceBlock();
 									//console.log(next.type);
 							    	//console.log(root.type);
@@ -234,7 +234,7 @@
 					if (workspace.getBlockById(event.blockId) != null
 						&& workspace.getBlockById(event.blockId).type.startsWith("attr_")) {
 						var next = workspace.getBlockById(event.blockId);
-						while (next.nextConnection.targetConnection != null) {
+						while (next.nextConnection != null && next.nextConnection.targetConnection != null) {
 							next = next.nextConnection.targetConnection.getSourceBlock();
 							if (next.type == workspace.getBlockById(event.blockId).type) {
 								console.log('hello0.1');
@@ -243,7 +243,7 @@
 							}
 						}
 						next = workspace.getBlockById(event.blockId);
-						while (next.previousConnection.targetConnection != null) {
+						while (next.previousConnection != null && next.previousConnection.targetConnection != null) {
 							next = next.previousConnection.targetConnection.getSourceBlock();
 							if (next.type == workspace.getBlockById(event.blockId).type) {
 								console.log('hello0.2');
@@ -274,7 +274,7 @@
 						&& workspace.getBlockById(event.blockId).type == "attr_block_type") {
 						//console.log('HELLO');
 						var next = workspace.getBlockById(event.blockId);
-						while (next.nextConnection.targetConnection != null) {
+						while (next.nextConnection != null && next.nextConnection.targetConnection != null) {
 							next = next.nextConnection.targetConnection.getSourceBlock();
 							//console.log(next.type);
 					    	//console.log(root.type);
@@ -304,7 +304,7 @@
 							}
 						}
 						next = workspace.getBlockById(event.blockId);
-						while (next.previousConnection.targetConnection != null
+						while (next.previousConnection != null && next.previousConnection.targetConnection != null
 							&& next.previousConnection.targetConnection.getSourceBlock().type != "block"
 							&& next.previousConnection.targetConnection.getSourceBlock().type != "set") {
 							//console.log('hello');
@@ -339,10 +339,11 @@
 					}
 					if (workspace.getBlockById(event.blockId) != null
 						&& warningAttrs.includes(workspace.getBlockById(event.blockId).type)) {
+						//console.log(12345);
 						//console.log('hello1');
 						var hasName = false; 
 						var next = workspace.getBlockById(event.blockId);
-						while (next.nextConnection.targetConnection != null) {
+						while (next.nextConnection != null && next.nextConnection.targetConnection != null) {
 							next = next.nextConnection.targetConnection.getSourceBlock();
 							//console.log(next.type);
 					    	//console.log(root.type);
@@ -378,15 +379,17 @@
 						}
 						next = workspace.getBlockById(event.blockId);
 						//console.log(next.inputList[0].fieldRow[1].getValue());
-						while (next.previousConnection.targetConnection != null
+						while (next.previousConnection != null && next.previousConnection.targetConnection != null
 							&& next.previousConnection.targetConnection.getSourceBlock().type != "block"
 							&& next.previousConnection.targetConnection.getSourceBlock().type != "set") {
 							next = next.previousConnection.targetConnection.getSourceBlock();
 							//console.log(next.inputList[0].fieldRow[1].getValue());
 							//console.log(next.type);
 					    	//console.log(root.type);
+					    	console.log('erh0');
 							if (next.type == "attr_block_type") {
 								hasName = true;
+								console.log('erh');
 								console.log(((next.inputList[0].fieldRow[1].getValue() == "string"
 									|| next.inputList[0].fieldRow[1].getValue() == "number") && warningAttrs.includes(workspace.getBlockById(event.blockId).type)));
 								if (!((next.inputList[0].fieldRow[1].getValue() == "file"
@@ -417,7 +420,8 @@
 								}
 							}
 						}
-						if (!hasName) {
+						if (!hasName && workspace.getBlockById(event.blockId).previousConnection != null &&
+							workspace.getBlockById(event.blockId).previousConnection.targetConnection != null) {
 							console.log('hello5');
 							workspace.getBlockById(event.blockId).previousConnection.disconnect();
 						}
