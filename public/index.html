@@ -149,8 +149,8 @@
 
 				if (event.type == Blockly.Events.BLOCK_MOVE) {
 					if (workspace.getBlockById(event.blockId) != null
-						&& (workspace.getBlockById(event.blockId).type === "block"
-						|| workspace.getBlockById(event.blockId).type === "set")) {
+						&& (workspace.getBlockById(event.blockId).type === "block_location"
+						|| workspace.getBlockById(event.blockId).type === "set_location")) {
 						//console.log('kkk');
 						let child = workspace.getBlockById(event.blockId);
 				    	let root = child.getParent();
@@ -159,14 +159,14 @@
 					    		child = child.getParent();
 					    		root = child.getParent();
 					    	}
-				    		if (workspace.getBlockById(event.blockId).type === "block") {
+				    		if (workspace.getBlockById(event.blockId).type === "block_location") {
 				    			if (root != null && (root.type === "model" || root.type === "location")) {
 				    				console.log('hello-1');
 					    			workspace.getBlockById(event.blockId).previousConnection.disconnect();
 					    			return;
 					    		}
 				    		}
-				    		if (workspace.getBlockById(event.blockId).type === "set") {
+				    		if (workspace.getBlockById(event.blockId).type === "set_location") {
 				    			//console.log('hello');
 				    			var next = workspace.getBlockById(event.blockId);
 				    			while (next.nextConnection != null && next.nextConnection.targetConnection != null) {
@@ -174,7 +174,7 @@
 									//console.log(next.type);
 							    	//console.log(root.type);
 									if (root != null
-										&& (next.type == 'block' && (root.type == 'location' ||
+										&& (next.type == 'block_location' && (root.type == 'location' ||
 										root.type == 'model'))) {
 										//console.log(root.type);
 										console.log('hello0');
@@ -305,8 +305,11 @@
 						}
 						next = workspace.getBlockById(event.blockId);
 						while (next.previousConnection != null && next.previousConnection.targetConnection != null
-							&& next.previousConnection.targetConnection.getSourceBlock().type != "block"
-							&& next.previousConnection.targetConnection.getSourceBlock().type != "set") {
+							&& next.previousConnection.targetConnection.getSourceBlock().type != "block_model"
+							&& next.previousConnection.targetConnection.getSourceBlock().type != "block_location"
+							&& next.previousConnection.targetConnection.getSourceBlock().type != "set_model_first"
+							&& next.previousConnection.targetConnection.getSourceBlock().type != "set_model_second"
+							&& next.previousConnection.targetConnection.getSourceBlock().type != "set_location") {
 							//console.log('hello');
 							next = next.previousConnection.targetConnection.getSourceBlock();
 							//console.log(next.type);
@@ -380,8 +383,11 @@
 						next = workspace.getBlockById(event.blockId);
 						//console.log(next.inputList[0].fieldRow[1].getValue());
 						while (next.previousConnection != null && next.previousConnection.targetConnection != null
-							&& next.previousConnection.targetConnection.getSourceBlock().type != "block"
-							&& next.previousConnection.targetConnection.getSourceBlock().type != "set") {
+							&& next.previousConnection.targetConnection.getSourceBlock().type != "block_model"
+							&& next.previousConnection.targetConnection.getSourceBlock().type != "block_location"
+							&& next.previousConnection.targetConnection.getSourceBlock().type != "set_model_first"
+							&& next.previousConnection.targetConnection.getSourceBlock().type != "set_model_second"
+							&& next.previousConnection.targetConnection.getSourceBlock().type != "set_location") {
 							next = next.previousConnection.targetConnection.getSourceBlock();
 							//console.log(next.inputList[0].fieldRow[1].getValue());
 							//console.log(next.type);
