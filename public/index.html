@@ -107,12 +107,30 @@
 
 		  Blockly.svgResize(workspace);
 			function myUpdateFunction(event) {
+				var fileAttrs = [
+					"attr_block_path",
+					"attr_block_mimes"
+				];
+				var imageAttrs = [
+					"attr_block_width",
+					"attr_block_height",
+					"attr_block_resize"
+				];
+				var archiveAttrs = [
+					"attr_block_method",
+					"attr_block_ratio",
+					"attr_block_comment",
+					"attr_block_unpacked_size"
+				];
+				var warningAttrs = fileAttrs.concat(imageAttrs).concat(archiveAttrs);
+				var imageAttrs = fileAttrs.concat(imageAttrs);
+				var archiveAttrs = fileAttrs.concat(archiveAttrs);
 				if (event.type == Blockly.Events.BLOCK_CHANGE) {
 					if (workspace.getBlockById(event.blockId) != null
 						&& workspace.getBlockById(event.blockId).type === "attr_set_id") {
 						var next = workspace.getBlockById(event.blockId);
-						while (next.previousConnection != null && next.previousConnection.targetConnection != null) {
-							next = next.previousConnection.targetConnection.getSourceBlock();
+						while (next.outputConnection != null && next.outputConnection.targetConnection != null) {
+							next = next.outputConnection.targetConnection.getSourceBlock();
 							if (next.type == "location") {
 								var idsStr = [];
 								for (var i = 0; i < ids.length; i++) {
@@ -145,6 +163,93 @@
 						}
 					}
 					//console.log(ids);
+					if (workspace.getBlockById(event.blockId) != null
+						&& workspace.getBlockById(event.blockId).type === "attr_block_type") {
+						var nexts = [];
+						//Blockly.Events.fire(new (Blockly.Events.get(Blockly.Events.BLOCK_MOVE))(workspace.getBlockById(event.blockId)));
+						var next = workspace.getBlockById(event.blockId);
+						while (next.getInputTargetBlock("NEXT") != null) {
+							next = next.getInputTargetBlock("NEXT");
+							//console.log(next.type);
+					    	//console.log(root.type);
+							if (!((workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "file"
+								&& fileAttrs.includes(next.type))
+								|| (workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "image"
+								&& imageAttrs.includes(next.type))
+								|| (workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "archive"
+								&& archiveAttrs.includes(next.type)))
+								&& (!(workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "string"
+									|| workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "number")
+								&& warningAttrs.includes(next.type)
+								|| ((workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "string"
+									|| workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "number") && warningAttrs.includes(next.type)))) {
+								//console.log(root.type);
+								console.log('hello-2.1');
+								//console.log(workspace.getBlockById(event.blockId).getInputTargetBlock('NEXT'));
+								//console.log(workspace.getBlockById(event.blockId));
+								//workspace.getBlockById(event.blockId).inputList[0].connection.disconnect();
+								//console.log(next);
+								//next.outputConnection.disconnect();
+								//next.outputConnection.disconnect();
+								nexts.push(next);
+								
+								/*var prevConn = workspace.getBlockById(event.blockId).previousConnection.targetConnection.getSourceBlock().nextConnection;
+								workspace.getBlockById(event.blockId).previousConnection.disconnect();
+								if (workspace.getBlockById(event.blockId).nextConnection.targetConnection != null) {
+									var nextConn = workspace.getBlockById(event.blockId).nextConnection;
+									workspace.getBlockById(event.blockId).nextConnection.disconnect();
+									prevConn.connect(nextConn);
+								}*/
+								//console.log('hello');
+								//return;
+							}
+						}
+						next = workspace.getBlockById(event.blockId);
+						while (next.outputConnection != null && next.outputConnection.targetConnection != null
+							&& next.outputConnection.targetConnection.getSourceBlock().type != "block_model"
+							&& next.outputConnection.targetConnection.getSourceBlock().type != "block_location"
+							&& next.outputConnection.targetConnection.getSourceBlock().type != "set_model_first"
+							&& next.outputConnection.targetConnection.getSourceBlock().type != "set_model_second"
+							&& next.outputConnection.targetConnection.getSourceBlock().type != "set_location") {
+							//console.log('hello');
+							next = next.outputConnection.targetConnection.getSourceBlock();
+							//console.log(next.type);
+					    	//console.log(root.type);
+							if (!((workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "file"
+								&& fileAttrs.includes(next.type))
+								|| (workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "image"
+								&& imageAttrs.includes(next.type))
+								|| (workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "archive"
+								&& archiveAttrs.includes(next.type)))
+								&& (!(workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "string"
+									|| workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "number")
+								&& warningAttrs.includes(next.type)
+								|| ((workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "string"
+									|| workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "number") && warningAttrs.includes(next.type)))) {
+								console.log('hello-2.2');
+								nexts.push(next);
+								//console.log(root.type);
+								/*var prevConn = workspace.getBlockById(event.blockId).previousConnection.targetConnection.getSourceBlock().nextConnection;
+								workspace.getBlockById(event.blockId).previousConnection.disconnect();
+								if (workspace.getBlockById(event.blockId).nextConnection.targetConnection != null) {
+									var nextConn = workspace.getBlockById(event.blockId).nextConnection;
+									workspace.getBlockById(event.blockId).nextConnection.disconnect();
+									prevConn.connect(nextConn);
+								}*/
+								//console.log('hello');
+								//return;
+							}
+						}
+						console.log(nexts);
+						nexts.forEach((next) => {
+							next.outputConnection.disconnect();
+							if (next.getInputTargetBlock("NEXT") != null) {
+								next.getInputTargetBlock("NEXT").outputConnection.disconnect();
+							}
+							next.moveBy(50,50);
+							next.workspace.getAudioManager().play('disconnect');
+						});
+					}
 				}
 
 				if (event.type == Blockly.Events.BLOCK_MOVE) {
@@ -234,48 +339,40 @@
 					if (workspace.getBlockById(event.blockId) != null
 						&& workspace.getBlockById(event.blockId).type.startsWith("attr_")) {
 						var next = workspace.getBlockById(event.blockId);
-						while (next.nextConnection != null && next.nextConnection.targetConnection != null) {
-							next = next.nextConnection.targetConnection.getSourceBlock();
+						//console.log(next.childBlocks_[0].type);
+						var nextTypes = [];
+						while (next.getInputTargetBlock("NEXT") != null) {
+							next = next.getInputTargetBlock("NEXT");
+							nextTypes.push(next.type);
 							if (next.type == workspace.getBlockById(event.blockId).type) {
 								console.log('hello0.1');
-								workspace.getBlockById(event.blockId).nextConnection.disconnect();
+								next.outputConnection.disconnect();
 								return;
 							}
 						}
 						next = workspace.getBlockById(event.blockId);
-						while (next.previousConnection != null && next.previousConnection.targetConnection != null) {
-							next = next.previousConnection.targetConnection.getSourceBlock();
+						while (next.outputConnection != null && next.outputConnection.targetConnection != null) {
+							next = next.outputConnection.targetConnection.getSourceBlock();
 							if (next.type == workspace.getBlockById(event.blockId).type) {
 								console.log('hello0.2');
-								workspace.getBlockById(event.blockId).previousConnection.disconnect();
+								next.outputConnection.disconnect();
+								return;
+							}
+							//console.log(nextTypes);
+							//console.log(next.type);
+							if (nextTypes.includes(next.type)) {
+								console.log('hello0.3');
+								next.outputConnection.disconnect();
 								return;
 							}
 						}
 					}
-					var fileAttrs = [
-						"attr_block_path",
-						"attr_block_mimes"
-					];
-					var imageAttrs = [
-						"attr_block_width",
-						"attr_block_height",
-						"attr_block_resize"
-					];
-					var archiveAttrs = [
-						"attr_block_method",
-						"attr_block_ratio",
-						"attr_block_comment",
-						"attr_block_unpacked_size"
-					];
-					var warningAttrs = fileAttrs.concat(imageAttrs).concat(archiveAttrs);
-					var imageAttrs = fileAttrs.concat(imageAttrs);
-					var archiveAttrs = fileAttrs.concat(archiveAttrs);
 					if (workspace.getBlockById(event.blockId) != null
 						&& workspace.getBlockById(event.blockId).type == "attr_block_type") {
 						//console.log('HELLO');
 						var next = workspace.getBlockById(event.blockId);
-						while (next.nextConnection != null && next.nextConnection.targetConnection != null) {
-							next = next.nextConnection.targetConnection.getSourceBlock();
+						while (next.getInputTargetBlock("NEXT") != null) {
+							next = next.getInputTargetBlock("NEXT");
 							//console.log(next.type);
 					    	//console.log(root.type);
 							if (!((workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "file"
@@ -291,7 +388,9 @@
 									|| workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "number") && warningAttrs.includes(next.type)))) {
 								//console.log(root.type);
 								console.log('hello1');
-								workspace.getBlockById(event.blockId).nextConnection.disconnect();
+								//console.log(workspace.getBlockById(event.blockId).getInputTargetBlock('NEXT'));
+								//console.log(workspace.getBlockById(event.blockId).inputList[0].connection);
+								next.outputConnection.disconnect();
 								/*var prevConn = workspace.getBlockById(event.blockId).previousConnection.targetConnection.getSourceBlock().nextConnection;
 								workspace.getBlockById(event.blockId).previousConnection.disconnect();
 								if (workspace.getBlockById(event.blockId).nextConnection.targetConnection != null) {
@@ -304,14 +403,14 @@
 							}
 						}
 						next = workspace.getBlockById(event.blockId);
-						while (next.previousConnection != null && next.previousConnection.targetConnection != null
-							&& next.previousConnection.targetConnection.getSourceBlock().type != "block_model"
-							&& next.previousConnection.targetConnection.getSourceBlock().type != "block_location"
-							&& next.previousConnection.targetConnection.getSourceBlock().type != "set_model_first"
-							&& next.previousConnection.targetConnection.getSourceBlock().type != "set_model_second"
-							&& next.previousConnection.targetConnection.getSourceBlock().type != "set_location") {
+						while (next.outputConnection != null && next.outputConnection.targetConnection != null
+							&& next.outputConnection.targetConnection.getSourceBlock().type != "block_model"
+							&& next.outputConnection.targetConnection.getSourceBlock().type != "block_location"
+							&& next.outputConnection.targetConnection.getSourceBlock().type != "set_model_first"
+							&& next.outputConnection.targetConnection.getSourceBlock().type != "set_model_second"
+							&& next.outputConnection.targetConnection.getSourceBlock().type != "set_location") {
 							//console.log('hello');
-							next = next.previousConnection.targetConnection.getSourceBlock();
+							next = next.outputConnection.targetConnection.getSourceBlock();
 							//console.log(next.type);
 					    	//console.log(root.type);
 							if (!((workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "file"
@@ -327,7 +426,7 @@
 									|| workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "number") && warningAttrs.includes(next.type)))) {
 								console.log('hello2');
 								//console.log(root.type);
-								workspace.getBlockById(event.blockId).previousConnection.disconnect();
+								next.outputConnection.disconnect();
 								/*var prevConn = workspace.getBlockById(event.blockId).previousConnection.targetConnection.getSourceBlock().nextConnection;
 								workspace.getBlockById(event.blockId).previousConnection.disconnect();
 								if (workspace.getBlockById(event.blockId).nextConnection.targetConnection != null) {
@@ -346,8 +445,8 @@
 						//console.log('hello1');
 						var hasName = false; 
 						var next = workspace.getBlockById(event.blockId);
-						while (next.nextConnection != null && next.nextConnection.targetConnection != null) {
-							next = next.nextConnection.targetConnection.getSourceBlock();
+						while (next.getInputTargetBlock("NEXT") != null) {
+							next = next.getInputTargetBlock("NEXT");
 							//console.log(next.type);
 					    	//console.log(root.type);
 							if (next.type == "attr_block_type") {
@@ -365,7 +464,7 @@
 									|| next.inputList[0].fieldRow[1].getValue() == "number") && warningAttrs.includes(workspace.getBlockById(event.blockId).type)))) {
 									//console.log(root.type);
 									console.log('hello3');
-									workspace.getBlockById(event.blockId).nextConnection.disconnect();
+									next.outputConnection.disconnect();
 									/*if (workspace.getBlockById(event.blockId).nextConnection.targetConnection != null)
 										workspace.getBlockById(event.blockId).nextConnection.disconnect();*/
 									/*var prevConn = workspace.getBlockById(event.blockId).previousConnection.targetConnection.getSourceBlock().nextConnection;
@@ -382,13 +481,13 @@
 						}
 						next = workspace.getBlockById(event.blockId);
 						//console.log(next.inputList[0].fieldRow[1].getValue());
-						while (next.previousConnection != null && next.previousConnection.targetConnection != null
-							&& next.previousConnection.targetConnection.getSourceBlock().type != "block_model"
-							&& next.previousConnection.targetConnection.getSourceBlock().type != "block_location"
-							&& next.previousConnection.targetConnection.getSourceBlock().type != "set_model_first"
-							&& next.previousConnection.targetConnection.getSourceBlock().type != "set_model_second"
-							&& next.previousConnection.targetConnection.getSourceBlock().type != "set_location") {
-							next = next.previousConnection.targetConnection.getSourceBlock();
+						while (next.outputConnection != null && next.outputConnection.targetConnection != null
+							&& next.outputConnection.targetConnection.getSourceBlock().type != "block_model"
+							&& next.outputConnection.targetConnection.getSourceBlock().type != "block_location"
+							&& next.outputConnection.targetConnection.getSourceBlock().type != "set_model_first"
+							&& next.outputConnection.targetConnection.getSourceBlock().type != "set_model_second"
+							&& next.outputConnection.targetConnection.getSourceBlock().type != "set_location") {
+							next = next.outputConnection.targetConnection.getSourceBlock();
 							//console.log(next.inputList[0].fieldRow[1].getValue());
 							//console.log(next.type);
 					    	//console.log(root.type);
@@ -411,7 +510,7 @@
 									|| next.inputList[0].fieldRow[1].getValue() == "number") && warningAttrs.includes(workspace.getBlockById(event.blockId).type)))) {
 									//console.log(root.type);
 									console.log('hello4');
-									workspace.getBlockById(event.blockId).previousConnection.disconnect();
+									next.outputConnection.disconnect();
 									/*if (workspace.getBlockById(event.blockId).nextConnection.targetConnection != null)
 										workspace.getBlockById(event.blockId).nextConnection.disconnect();*/
 									/*var prevConn = workspace.getBlockById(event.blockId).previousConnection.targetConnection.getSourceBlock().nextConnection;
@@ -426,10 +525,10 @@
 								}
 							}
 						}
-						if (!hasName && workspace.getBlockById(event.blockId).previousConnection != null &&
-							workspace.getBlockById(event.blockId).previousConnection.targetConnection != null) {
+						if (!hasName && workspace.getBlockById(event.blockId).outputConnection != null &&
+							workspace.getBlockById(event.blockId).outputConnection.targetConnection != null) {
 							console.log('hello5');
-							workspace.getBlockById(event.blockId).previousConnection.disconnect();
+							workspace.getBlockById(event.blockId).outputConnection.disconnect();
 						}
 					}
 				}
