@@ -97,7 +97,9 @@
 		  	}
 		  }*/
 
-		  var ids = [];
+		  var idsRoot = [];
+		  var idsBlock = [];
+		  //var flagSelected = false;
 
 		  function updateId(id) {
 		  	if (id.type == 'attr_set_id') {
@@ -125,14 +127,142 @@
 				var warningAttrs = fileAttrs.concat(imageAttrs).concat(archiveAttrs);
 				var imageAttrs = fileAttrs.concat(imageAttrs);
 				var archiveAttrs = fileAttrs.concat(archiveAttrs);
+				/*if (event.type != Blockly.Events.SELECTED)
+					flagSelected = false;
+				if (event.type == Blockly.Events.SELECTED) {
+					if (workspace.getBlockById(event.newElementId) != null && workspace.getBlockById(event.newElementId).type == "attr_set_id") {
+						console.log("q");
+
+						//Blockly.Events.fire(new (Blockly.Events.get(Blockly.Events.BLOCK_CHANGE))(workspace.getBlockById(event.newElementId), 'collapsed', null, workspace.getBlockById(event.newElementId).collapsed_, workspace.getBlockById(event.newElementId).inputList[0].fieldRow[1].getValue()));
+						if (!flagSelected) {
+							Blockly.Events.fire(new (Blockly.Events.get(Blockly.Events.BLOCK_MOVE))(workspace.getBlockById(event.newElementId)));
+							Blockly.Events.fire(new (Blockly.Events.get(Blockly.Events.SELECTED))(event.newElementId, event.newElementId, event.workspaceId));
+						}
+						flagSelected = true;
+					}
+					else {
+						flagSelected = false;
+					}
+				}*/
+						/*var next = workspace.getBlockById(event.newElementId);
+						while (next.outputConnection != null && next.outputConnection.targetConnection != null) {
+							next = next.outputConnection.targetConnection.getSourceBlock();
+							console.log("cycle");
+							if (next.type == "set_model_second" || next.type == "set_location") {
+								var idsStr = [];
+								for (var i = 0; i < idsRoot.length; i++) {
+									idsStr.push(Object.values(idsRoot[i])[0]);
+								}
+								var idsRes = [];
+					            for (var i = 0; i < idsStr.length; i++)
+					            	idsRes.push([idsStr[i], idsStr[i]]);
+					            if (idsRes.length == 0)
+					            	idsRes = [["",""]];
+					            var conn;
+					            if (workspace.getBlockById(event.newElementId).getInputTargetBlock('NEXT') != null)
+					            	conn = workspace.getBlockById(event.newElementId).getInputTargetBlock('NEXT')
+					            		.outputConnection;
+					            workspace.getBlockById(event.newElementId).getField('ID').dispose();
+								workspace.getBlockById(event.newElementId).removeInput('NEXT', true);
+							    workspace.getBlockById(event.newElementId).jsonInit({
+								  "type": "attr_set_id",
+								  "message0": "id of set %1 ----> %2",
+								  "args0": [
+								    {
+								      "type": "field_dropdown",
+								      "name": "ID",
+								      "options": idsRes
+								    },
+								    {
+								      "type": "input_value",
+								      "name": "NEXT",
+								      "check": attr_set
+								    }
+								  ],
+								  "colour": "180",
+								  "output": attr_set
+								  //"output": "attr"
+								});
+								if (conn != undefined)
+									workspace.getBlockById(event.newElementId).getInput('NEXT').connection.connect(conn);
+								break;
+							}
+						}
+						return;
+					}
+				}*/
+					/*var next = workspace.getBlockById(event.newElementId);
+						while (next.outputConnection != null && next.outputConnection.targetConnection != null) {
+							next = next.outputConnection.targetConnection.getSourceBlock();
+							if (next.type == "set_model_second") {
+								var conn1 = workspace.getBlockById(event.newElementId).outputConnection;
+					            var conn2;
+					            if (workspace.getBlockById(event.newElementId).outputConnection.targetConnection
+					            		.getSourceBlock().type.startsWith("attr_set_")) {
+					            	conn2 = workspace.getBlockById(event.newElementId).outputConnection.targetConnection
+					            		.getSourceBlock().getInput('NEXT').connection;
+					            }
+					            else if (workspace.getBlockById(event.newElementId).outputConnection.targetConnection
+					            		.getSourceBlock().type == "set_model_second") {
+					            	conn2 = workspace.getBlockById(event.newElementId).outputConnection.targetConnection
+					            		.getSourceBlock().getInput('ATTRS').connection;
+					            }
+					            conn1.disconnect();
+					            conn1.connect(conn2);
+					        }
+				        }
+				    }
+				}*/
+				if (event.type == Blockly.Events.BLOCK_DELETE) {
+					console.log("delete");
+					idsRoot = idsRoot.filter(idRoot => {
+						return event.ids.includes(Object.keys(idsRoot)[0]);
+					});
+					console.log(idsRoot);
+				}
 				if (event.type == Blockly.Events.BLOCK_CHANGE) {
 					if (workspace.getBlockById(event.blockId) != null
 						&& workspace.getBlockById(event.blockId).type === "attr_set_id") {
+						console.log("w");
 						var next = workspace.getBlockById(event.blockId);
 						while (next.outputConnection != null && next.outputConnection.targetConnection != null) {
 							next = next.outputConnection.targetConnection.getSourceBlock();
-							if (next.type == "location") {
-								var idsStr = [];
+							if (next.type == "set_model_first") {
+								for (var i = 0; i < idsRoot.length; i++) {
+									var obj = idsRoot[i];
+									var name = event.blockId;
+									if (obj[name] !== undefined) {
+										idsRoot.splice(i, 1);
+									}
+								}
+								var obj = {};
+								var name = event.blockId;
+								var val = event.newValue;
+								obj[name] = val;
+								idsRoot.push(obj);
+								break;
+							}
+							/*if (next.type == "set_model_second") {
+								while (next.previousConnection != null && next.previousConnection.targetConnection != null) {
+									next = next.previousConnection.targetConnection.getSourceBlock();
+									if (next.previousConnection.targetConnection.getSourceBlock().type == "model") {
+										for (var i = 0; i < idsRoot.length; i++) {
+											var obj = idsRoot[i];
+											var name = event.blockId;
+											if (obj[name] !== undefined) {
+												idsRoot.splice(i, 1);
+											}
+										}
+										var obj = {};
+										var name = event.blockId;
+										var val = event.newValue;
+										obj[name] = val;
+										idsRoot.push(obj);
+										break;
+									}
+								}
+							}*/
+								/*var idsStr = [];
 								for (var i = 0; i < ids.length; i++) {
 									idsStr.push(Object.values(ids[i])[0]);
 								}
@@ -159,7 +289,7 @@
 								obj[name] = val;
 								ids.push(obj);
 								break;
-							}
+							}*/
 						}
 					}
 					//console.log(ids);
@@ -253,6 +383,120 @@
 				}
 
 				if (event.type == Blockly.Events.BLOCK_MOVE) {
+					/*if (workspace.getBlockById(event.blockId) != null
+						&& workspace.getBlockById(event.blockId).type === "block_model") {
+						var next = workspace.getBlockById(event.blockId);
+						while (next.outputConnection == null) {
+							next = next.previousConnection.targetConnection.getSourceBlock();
+							if (next.outputConnection.targetConnection.getSourceBlock().type == "set_model_first") {
+								idsBlock.forEach(idBlock => {
+									if (Object.keys(idBlock)[0] == next.outputConnection.targetConnection.getSourceBlock()
+										.id)
+								if ()
+								var obj = {};
+								var name = null;
+								var next2 = next.outputConnection.targetConnection.getSourceBlock()
+									.getInputTargetBlock('ATTRS');
+								while (next2 != null) {
+									next2 = next2.getInputTargetBlock('NEXT');
+									if (next2.type == "attr_set_id") {
+										name = next2.getField('ID');
+										break;
+									}
+								}
+								if (name != null) {
+									var val = null;
+									next2 = workspace.getBlockById(event.blockId).getInputTargetBlock('ATTRS');
+									while (next2 != null) {
+										next2 = next2.getInputTargetBlock('NEXT');
+										if (next2.type == "attr_block_id") {
+											val = next2.getField('ID');
+											break;
+										}
+									}
+									obj[name] = val;
+									idsBlock.push(obj);
+								}
+							}
+						}
+					}*/
+					if (workspace.getBlockById(event.blockId) != null
+						&& workspace.getBlockById(event.blockId).type === "attr_set_id") {
+						var next = workspace.getBlockById(event.blockId);
+						while (next.outputConnection != null && next.outputConnection.targetConnection != null) {
+							next = next.outputConnection.targetConnection.getSourceBlock();
+							if (next.type == "set_model_second" || next.type == "set_location") {
+								var idsStr = [];
+								for (var i = 0; i < idsRoot.length; i++) {
+									idsStr.push(Object.values(idsRoot[i])[0]);
+								}
+								console.log(idsStr);
+								console.log(workspace.getBlockById(event.blockId).getField("ID"));
+								//workspace.getBlockById(event.blockId).getField('ID').dispose();
+								//workspace.getBlockById(event.blockId).getField('NEXT').dispose();
+								/*workspace.getBlockById(event.blockId).appendDummyInput().appendField(new Blockly.FieldDropdown(
+							        function () {
+							            var idsRes = [];
+							            for (var i = 0; i < idsStr.length; i++)
+							            	idsRes.push([idsStr[i], idsStr[i]]);
+							            return idsRes;
+							        }
+							    ), 'ID');*/
+							    var idsRes = [];
+					            for (var i = 0; i < idsStr.length; i++)
+					            	idsRes.push([idsStr[i], idsStr[i]]);
+					            if (idsRes.length == 0)
+					            	idsRes = [["",""]];
+					            var conn;
+					            if (workspace.getBlockById(event.blockId).getInputTargetBlock('NEXT') != null)
+					            	conn = workspace.getBlockById(event.blockId).getInputTargetBlock('NEXT')
+					            		.outputConnection;
+					            workspace.getBlockById(event.blockId).getField('ID').dispose();
+					            workspace.getBlockById(event.blockId).removeInput('NEXT', true);
+							    workspace.getBlockById(event.blockId).jsonInit({
+								  "type": "attr_set_id",
+								  "message0": "id of set %1 ----> %2",
+								  "args0": [
+								    {
+								      "type": "field_dropdown",
+								      "name": "ID",
+								      "options": idsRes
+								    },
+								    {
+								      "type": "input_value",
+								      "name": "NEXT",
+								      "check": attr_set
+								    }
+								  ],
+								  "colour": "180",
+								  "output": attr_set
+								  //"output": "attr"
+								});
+								if (conn != undefined)
+									workspace.getBlockById(event.blockId).getInput('NEXT').connection.connect(conn);
+							    //workspace.getBlockById(event.blockId).appendValueInput('NEXT')
+									//.setCheck(attr_set)
+									//.appendField('---->');
+										//.appendField('length of');
+								/*if (!idsStr.includes(event.newValue)) {
+									workspace.getBlockById(event.blockId).setColour(0);
+								}
+								else {
+									workspace.getBlockById(event.blockId).setColour(180);
+								}*/
+								break;
+							}
+							/*else if (next.type == "block_location") {
+								var next2 = next;
+								while (next2.outputConnection == null) {
+									next2 = next.previousConnection.targetConnection.getSourceBlock();
+									if (next2.type == "set_location") {
+
+									}
+								}
+							}*/
+						}
+					}
 					if (workspace.getBlockById(event.blockId) != null
 						&& (workspace.getBlockById(event.blockId).type === "block_location"
 						|| workspace.getBlockById(event.blockId).type === "set_location")) {
