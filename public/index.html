@@ -5,7 +5,8 @@
 		<title>Test - Blockly</title>
 		<script src="blockly/blockly_compressed.js"></script>
 		<script src="blockly/blocks_compressed.js"></script>
-		<script src="blockly/generators/bml.js"></script>
+		<script src="bml.js"></script>
+		<script src="bml_gen.js"></script>
 		<script src="blockly/msg/ru.js"></script>
 	</head>
 	<body>
@@ -218,7 +219,12 @@
 					idsRoot = idsRoot.filter(idRoot => {
 						return event.ids.includes(Object.keys(idsRoot)[0]);
 					});
+					idsBlock = idsBlock.filter(idBlock => {
+						console.log(Object.keys(idsBlock)[0]);
+						return event.ids.includes(Object.keys(idsBlock)[0]);
+					});
 					console.log(idsRoot);
+					console.log(idsBlock);
 				}
 				if (event.type == Blockly.Events.BLOCK_CHANGE) {
 					if (workspace.getBlockById(event.blockId) != null
