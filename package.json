@@ -1,6 +1,17 @@
 {
+  "name": "bml-visual-editor",
+  "version": "0.0.0",
+  "description": "",
+  "main": "public/index.html",
+  "scripts": {
+    "eslint": "eslint"
+  },
+  "devDependencies": {
+    "eslint": "8.19.0",
+    "mocha": "^10.0.0"
+  },
   "dependencies": {
-  	"express": "^4.17.0",
-    "blockly": "^8.0.0"
+    "blockly": "^8.0.0",
+    "express": "^4.17.0"
   }
 }

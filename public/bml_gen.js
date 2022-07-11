@@ -14,62 +14,35 @@ bmlGenerator['location'] = function(block) {
   return code;
 }
 
-bmlGenerator['set_model_first'] = function(block) {
+var x = function(block) {
   var statement_members =
       bmlGenerator.statementToCode(block, 'DO');
   const name = block.getFieldValue('NAME') === '' ? '' : ' name=\"' + block.getFieldValue('NAME') + '\"';
   const attrs = bmlGenerator.valueToCode(block, 'ATTRS', bmlGenerator.PRECEDENCE);
-  const code = '<set' + name + attrs + '>\n' + statement_members + '\n</set>\n' + bmlGenerator.blockToCode(block.getNextBlock(), true);
+  const code = '<' + block.type.split("_")[0] + name + attrs + '>\n' + statement_members + '\n</' + block.type.split("_")[0] + '>\n' + bmlGenerator.blockToCode(block.getNextBlock(), true);
   return code;
 }
 
-bmlGenerator['set_model_second'] = function(block) {
+var y = function(block) {
   const name = block.getFieldValue('NAME') === '' ? '' : ' name=\"' + block.getFieldValue('NAME') + '\"';
   const attrs = bmlGenerator.valueToCode(block, 'ATTRS', bmlGenerator.PRECEDENCE);
-  const code = '<set' + name + attrs + '/>' + bmlGenerator.blockToCode(block.getNextBlock(), true);
+  const code = '<' + block.type.split("_")[0] + name + attrs + '/>' + bmlGenerator.blockToCode(block.getNextBlock(), true);
   return code;
 }
 
-bmlGenerator['set_location'] = function(block) {
-  var statement_members =
-      bmlGenerator.statementToCode(block, 'DO');
-  const name = block.getFieldValue('NAME') === '' ? '' : ' name=\"' + block.getFieldValue('NAME') + '\"';
-  const attrs = bmlGenerator.valueToCode(block, 'ATTRS', bmlGenerator.PRECEDENCE);
-  const code = '<set' + name + attrs + '>\n' + statement_members + '\n</set>\n' + bmlGenerator.blockToCode(block.getNextBlock(), true);
-  return code;
-}
+bmlGenerator['set_model_first'] = x;
 
-bmlGenerator['block_model'] = function(block) {
-  const name = block.getFieldValue('NAME') === '' ? '' : ' name=\"' + block.getFieldValue('NAME') + '\"';
-  const attrs = bmlGenerator.valueToCode(block, 'ATTRS', bmlGenerator.PRECEDENCE);
-  const code = '<block' + name + attrs + '/>' + bmlGenerator.blockToCode(block.getNextBlock(), true);
-  return code;
-}
+bmlGenerator['set_model_second'] = y;
 
-bmlGenerator['block_location'] = function(block) {
-  const name = block.getFieldValue('NAME') === '' ? '' : ' name=\"' + block.getFieldValue('NAME') + '\"';
-  const attrs = bmlGenerator.valueToCode(block, 'ATTRS', bmlGenerator.PRECEDENCE);
-  const code = '<block' + name + attrs + '/>' + bmlGenerator.blockToCode(block.getNextBlock(), true);
-  return code;
-}
+bmlGenerator['set_location'] = x;
 
-attr_set.forEach(elem => {
-  bmlGenerator[elem] = function(block) {
-    const field = block.getFieldValue(elem.split(/_/)[2].toUpperCase()) === '' ? '' : ' ' + elem.split(/_/)[2] + '=\"' + block.getFieldValue(elem.split(/_/)[2].toUpperCase()) + '\"';
-    const code = field + bmlGenerator.valueToCode(block, 'NEXT', bmlGenerator.PRECEDENCE);
-    return [code, bmlGenerator.PRECEDENCE];
-  }
-});
+bmlGenerator['block_model'] = y;
 
-attr_block.forEach(elem => {
-  bmlGenerator[elem] = function(block) {
-    const field = block.getFieldValue(elem.split(/_/)[2].toUpperCase()) === '' ? '' : ' ' + elem.split(/_/)[2] + '=\"' + block.getFieldValue(elem.split(/_/)[2].toUpperCase()) + '\"';
-    const code = field + bmlGenerator.valueToCode(block, 'NEXT', bmlGenerator.PRECEDENCE);
-    return [code, bmlGenerator.PRECEDENCE];
-  }
-});
+bmlGenerator['block_location'] = y;
 
-attr_location.forEach(elem => {
+var attrs_all = attr_set.concat(attr_block).concat(attr_location);
+
+attrs_all.forEach(elem => {
   bmlGenerator[elem] = function(block) {
     const field = block.getFieldValue(elem.split(/_/)[2].toUpperCase()) === '' ? '' : ' ' + elem.split(/_/)[2] + '=\"' + block.getFieldValue(elem.split(/_/)[2].toUpperCase()) + '\"';
     const code = field + bmlGenerator.valueToCode(block, 'NEXT', bmlGenerator.PRECEDENCE);

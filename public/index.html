@@ -8,6 +8,20 @@
 		<script src="bml.js"></script>
 		<script src="bml_gen.js"></script>
 		<script src="blockly/msg/ru.js"></script>
+		<!-- добавим стили mocha для отображения результатов -->
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mocha/3.2.0/mocha.css">
+		<!-- добавляем сам фреймворк mocha -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/mocha/3.2.0/mocha.js"></script>
+		<script>
+		  // включаем режим тестирования в стиле BDD
+		  mocha.setup('bdd');
+		</script>
+		<!-- добавим chai -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/chai/3.5.0/chai.js"></script>
+		<script>
+		  // chai предоставляет большое количество функций. Объявим assert глобально
+		  let assert = chai.assert;
+		</script>
 	</head>
 	<body>
 		<div id="blocklyDiv" style="position: absolute;"></div>
@@ -98,36 +112,519 @@
 		  	}
 		  }*/
 
+		  class BMLError extends Error {
+			constructor(message) {
+			  super(message);
+			  this.name = "BMLError";
+			}
+		  }
+
 		  var idsRoot = [];
 		  var idsBlock = [];
+
+		  var fileAttrs = [
+				"attr_block_path",
+				"attr_block_mimes"
+			];
+			var imageAttrs = [
+				"attr_block_width",
+				"attr_block_height",
+				"attr_block_resize"
+			];
+			var archiveAttrs = [
+				"attr_block_method",
+				"attr_block_ratio",
+				"attr_block_comment",
+				"attr_block_unpacked_size"
+			];
+			var warningAttrs = fileAttrs.concat(imageAttrs).concat(archiveAttrs);
+			var imageAttrs = fileAttrs.concat(imageAttrs);
+			var archiveAttrs = fileAttrs.concat(archiveAttrs);
 		  //var flagSelected = false;
 
 		  function updateId(id) {
-		  	if (id.type == 'attr_set_id') {
+		  	if (id.type == 'attr_set_id' || id.type == 'attr_block_id') {
 		  		Blockly.Events.fire(new (Blockly.Events.get(Blockly.Events.BLOCK_CHANGE))(id, 'collapsed', null, id.collapsed_, id.inputList[0].fieldRow[1].getValue()));
 		  	}
 		  }
 
+		  class Skeleton {
+			  constructor(handler) {
+			  	this._handler = handler;
+			  }
+			  recSkeleton() {
+				if (!this._handler.condition()) {
+					return;
+				}
+				this._handler.calcNext();
+				try {
+					if (this._handler.body()) {
+						return;
+					}
+				}
+				catch (err) {
+					if (err instanceof BMLError) {
+						console.log(err.message);
+						return;
+					}
+					else {
+						throw err;
+					}
+				}
+				this.recSkeleton();
+			  }
+		  }
+
+		  class PutId {
+		  	constructor(event) {
+		  		this._event = event;
+		  	}
+		  	_removeFromIds() {
+		  		var ids;
+		  		if (this instanceof PutSetId) 
+					ids = idsRoot;
+				else if (this instanceof PutBlockId)
+					ids = idsBlock;
+
+				//Здесь создается новый массив и idsRoot или idsBlock затирается в ids новым отфильтрованным
+				//массивом - то есть теперь в ids хранится совершенно новый массив, а старый очистился.
+				//Поэтому idsRoot или idsBlock не изменился, и нужно явно присвоить этот новый массив.
+				let name = this._event.blockId;
+				ids = ids.filter(obj => {
+					return obj[name] === undefined;
+				});
+				
+				if (this instanceof PutSetId) 
+					idsRoot = ids;
+				else if (this instanceof PutBlockId)
+					idsBlock = ids;
+
+		  		/*for (var i = 0; i < ids.length; i++) {
+					var obj = ids[i];
+					var name = this._event.blockId;
+					if (obj[name] !== undefined) {
+						ids.splice(i, 1);
+					}
+				}*/
+		  	}
+		  }
+
+		  class PutSetId extends PutId {
+		  	constructor(next, event) {
+		  		super(event);
+		  		this._next = next;
+		  	}
+		  	condition() {
+		  		return this._next.outputConnection != null && this._next.outputConnection.targetConnection != null;
+		  	}
+		  	calcNext() {
+		  		this._next = this._next.outputConnection.targetConnection.getSourceBlock();
+		  	}
+		  	body() {
+		  		if (this._next.type == "set_model_first") {
+		  			super._removeFromIds();
+					var obj = {};
+					var name = this._event.blockId;
+					var val = this._event.newValue;
+					obj[name] = val;
+					idsRoot.push(obj);
+					//console.log(idsRoot);
+					return true;
+				}
+				return false;
+		  	}
+		}
+
+		class PutBlockId extends PutId {
+			constructor(next, event) {
+				super(event);
+				//console.log(event);
+		  		this._next = next;
+		  	}
+		  	condition() {
+		  		return this._next.outputConnection != null && this._next.outputConnection.targetConnection != null;
+		  	}
+		  	calcNext() {
+		  		this._next = this._next.outputConnection.targetConnection.getSourceBlock();
+		  	}
+		  	_getRoot() {
+		  		//console.log("MMMMM");
+		  		try {
+		  			/*if (this._next.outputConnection == null || this._next.outputConnection.targetConnection == null) {
+		  				//console.log("GGGGG");
+		  				throw new BMLError("У блока нет предыдущего элемента");
+		  			}*/
+		  			let child = this._next.previousConnection.targetConnection.getSourceBlock();
+			    	let root = child.getParent();
+			    	if (root == null) {
+			    		//console.log(root);
+						//return root;
+						throw new BMLError();
+			    	}
+			    	while (root != null && root.getInputTargetBlock("DO") != child) {
+			    		child = child.getParent();
+			    		root = child.getParent();
+			    	}
+			    	if (root == null) {
+			    		throw new BMLError("Нет корневого сета!");
+			    	}
+					//console.log(root);
+					return root;
+		  		}
+				catch(err) {
+					//console.log(err.message + "-----");
+					throw err;
+				}
+		  	}
+		  	_calcId(root) {
+		  		var id;
+				let next = root.getInputTargetBlock('ATTRS');
+				var first = true;
+				do {
+					if (!first) {
+						next = next.getInputTargetBlock("NEXT");
+					}
+					first = false;
+					console.log(next);
+					if (next.type === "attr_set_id") {
+						id = next.inputList[0].fieldRow[1].getValue();
+					}
+				} while (next.getInputTargetBlock("NEXT") != null);
+				return id;
+		  	}
+		  	_addIdsBlock(name, id) {
+		  		console.log(id);
+		  		var obj = {};
+		  		var val = this._event.newValue;
+				obj[name] = [val,id];
+				idsBlock.push(obj);
+				console.log(idsBlock);
+		  	}
+		  	body() {
+				if (this._next.type != "block_model") {
+					//console.log('statement_1');
+					return false;
+				}
+				if (this._next.outputConnection == null || this._next.outputConnection.targetConnection == null) {
+					//console.log('statement_2');
+					return true;
+				}
+				super._removeFromIds();
+				var name = this._event.blockId;
+				this._addIdsBlock(name, this._calcId(this._getRoot()));
+				//console.log('statement_3');
+				return true;
+		  	}
+		}
+
+		class PutBlockType {
+			constructor(next, event, nexts) {
+				this._next = next;
+				this._event = event;
+				this._nexts = nexts;
+			}
+			body() {
+				if (!((workspace.getBlockById(this._event.blockId).inputList[0].fieldRow[1].getValue() == "file"
+					&& fileAttrs.includes(this._next.type))
+					|| (workspace.getBlockById(this._event.blockId).inputList[0].fieldRow[1].getValue() == "image"
+					&& imageAttrs.includes(this._next.type))
+					|| (workspace.getBlockById(this._event.blockId).inputList[0].fieldRow[1].getValue() == "archive"
+					&& archiveAttrs.includes(this._next.type)))
+					&& (!(workspace.getBlockById(this._event.blockId).inputList[0].fieldRow[1].getValue() == "string"
+						|| workspace.getBlockById(this._event.blockId).inputList[0].fieldRow[1].getValue() == "number")
+					&& warningAttrs.includes(this._next.type)
+					|| ((workspace.getBlockById(this._event.blockId).inputList[0].fieldRow[1].getValue() == "string"
+						|| workspace.getBlockById(this._event.blockId).inputList[0].fieldRow[1].getValue() == "number") && warningAttrs.includes(this._next.type)))) {
+					console.log('hello-2.1');
+					this._nexts.push(this._next);
+			  	}
+			  	return false;
+			}
+			getNext() {
+				return this._next;
+			}
+			getNexts() {
+				return this._nexts;
+			}
+		}
+
+		class PutBlockType1 extends PutBlockType {
+			constructor(next, event, nexts) {
+				super(next, event, nexts);
+			}
+			condition() {
+		  		return this._next.getInputTargetBlock("NEXT") != null;
+		  	}
+		  	calcNext() {
+		  		this._next = this._next.getInputTargetBlock("NEXT");
+		  	}
+		  	body() {
+				super.body();
+			}
+		}
+
+		class PutBlockType2 extends PutBlockType {
+			constructor(next, event, nexts) {
+				super(next, event, nexts);
+			}
+			condition() {
+		  		return this._next.outputConnection != null && this._next.outputConnection.targetConnection != null
+							&& this._next.outputConnection.targetConnection.getSourceBlock().type != "block_model"
+							&& this._next.outputConnection.targetConnection.getSourceBlock().type != "block_location"
+							&& this._next.outputConnection.targetConnection.getSourceBlock().type != "set_model_first"
+							&& this._next.outputConnection.targetConnection.getSourceBlock().type != "set_model_second"
+							&& this._next.outputConnection.targetConnection.getSourceBlock().type != "set_location";
+		  	}
+		  	calcNext() {
+		  		this._next = this._next.outputConnection.targetConnection.getSourceBlock();
+		  	}
+		  	body() {
+				super.body();
+			}
+		}
+
+		class GetId {
+			constructor(next, event) {
+				this._next = next;
+				this._event = event;
+			}
+			_getIds(idsStr) {
+				console.log(idsStr);
+				var idsRes = [];
+	            for (var i = 0; i < idsStr.length; i++)
+	            	idsRes.push([idsStr[i], idsStr[i]]);
+	            if (idsRes.length == 0)
+	            	idsRes = [["",""]];
+	            return idsRes;
+			}
+		}
+
+		class GetBlockId extends GetId {
+			constructor(next, event) {
+				super(next, event);
+			}
+			condition() {
+		  		return this._next.outputConnection != null && this._next.outputConnection.targetConnection != null;
+		  	}
+		  	calcNext() {
+		  		this._next = this._next.outputConnection.targetConnection.getSourceBlock();
+		  	}
+		  	_getIds(idsStr) {
+		  		return super._getIds(idsStr);
+		  	}
+		  	_getRoot() {
+		  		let child = this._next.previousConnection.targetConnection.getSourceBlock();
+		    	let root = child.getParent();
+		    	if (child.type === "set_location") {
+		    		root = child;
+		    		console.log(root);
+		    		return root;
+		    	}
+	    		if (root == null) {
+	    			console.log(root);
+	    			return root;
+	    		}
+		    	while (root != null && root.getInputTargetBlock("DO") != child) {
+		    		child = child.getParent();
+		    		root = child.getParent();
+		    	}
+			    console.log(root);
+			    return root;
+		  	}
+		  	_calcId(root) {
+		  		var id;
+				let next = root.getInputTargetBlock('ATTRS');
+				var first = true;
+				do {
+					if (!first) {
+						next = next.getInputTargetBlock("NEXT");
+					}
+					first = false;
+					console.log(next);
+					if (next.type === "attr_set_id") {
+						id = next.inputList[0].fieldRow[1].getValue();
+					}
+				} while (next.getInputTargetBlock("NEXT") != null);
+				console.log(id);
+				return id;
+		  	}
+		  	_getIdsRes(id) {
+		  		var idsStr = [];
+		  		idsBlock.filter(idBlock => Object.values(idBlock)[0][1] == id).forEach(idBlock => {
+				    idsStr.push(Object.values(idBlock)[0][0]);
+				});
+		  		//idsStr.push(idsBlock[idsBlock.findIndex(idBlock => idBlock[0][1] == id)][0][0]);
+				/*for (var i = 0; i < idsBlock.length; i++) {
+					if (Object.values(idsBlock[i])[0][1] == id) {
+						idsStr.push(Object.values(idsBlock[i])[0][0]);
+					}
+				}*/
+				console.log(idsStr);
+				console.log(workspace.getBlockById(this._event.blockId).getField("ID"));
+				
+			    var idsRes = this._getIds(idsStr);
+
+			    return idsRes;
+		  	}
+		  	_putList(idsRes) {
+		  		var conn;
+	            if (workspace.getBlockById(this._event.blockId).getInputTargetBlock('NEXT') != null)
+	            	conn = workspace.getBlockById(this._event.blockId).getInputTargetBlock('NEXT')
+	            		.outputConnection;
+	            workspace.getBlockById(this._event.blockId).getField('ID').dispose();
+	            workspace.getBlockById(this._event.blockId).removeInput('NEXT', true);
+			    workspace.getBlockById(this._event.blockId).jsonInit({
+				  "type": "attr_block_id",
+				  "message0": "id of block %1 ----> %2",
+				  "args0": [
+				    {
+				      "type": "field_dropdown",
+				      "name": "ID",
+				      "options": idsRes
+				    },
+				    {
+				      "type": "input_value",
+				      "name": "NEXT",
+				      "check": attr_block
+				    }
+				  ],
+				  "colour": "180",
+				  "output": attr_block
+				  //"output": "attr"
+				});
+				if (conn != undefined)
+					workspace.getBlockById(this._event.blockId).getInput('NEXT').connection.connect(conn);
+		  	}
+		  	body() {
+				if (this._next.type == "block_location") {
+					var idsRes = this._getIdsRes(this._calcId(this._getRoot()));
+		            
+		            this._putList(idsRes);
+				    
+					return true;
+				}
+				return false;
+			}
+		}
+
+		class GetSetId extends GetId {
+			constructor(next, event) {
+				super(next, event);
+			}
+			condition() {
+				return this._next.outputConnection != null && this._next.outputConnection.targetConnection != null;
+			}
+			calcNext()  {
+				this._next = this._next.outputConnection.targetConnection.getSourceBlock();
+			}
+			_getIds(idsStr) {
+		  		return super._getIds(idsStr);
+		  	}
+		  	_getIdsRes() {
+		  		var idsStr = [];
+				for (var i = 0; i < idsRoot.length; i++) {
+					idsStr.push(Object.values(idsRoot[i])[0]);
+				}
+				console.log(idsStr);
+				console.log(workspace.getBlockById(this._event.blockId).getField("ID"));
+
+			    var idsRes = this._getIds(idsStr);
+			    console.log(idsRes);
+			    return idsRes;
+		  	}
+		  	_putList(idsRes) {
+		  		var conn;
+	            if (workspace.getBlockById(this._event.blockId).getInputTargetBlock('NEXT') != null)
+	            	conn = workspace.getBlockById(this._event.blockId).getInputTargetBlock('NEXT')
+	            		.outputConnection;
+	            workspace.getBlockById(this._event.blockId).getField('ID').dispose();
+	            workspace.getBlockById(this._event.blockId).removeInput('NEXT', true);
+			    workspace.getBlockById(this._event.blockId).jsonInit({
+				  "type": "attr_set_id",
+				  "message0": "id of set %1 ----> %2",
+				  "args0": [
+				    {
+				      "type": "field_dropdown",
+				      "name": "ID",
+				      "options": idsRes
+				    },
+				    {
+				      "type": "input_value",
+				      "name": "NEXT",
+				      "check": attr_set
+				    }
+				  ],
+				  "colour": "180",
+				  "output": attr_set
+				});
+				if (conn != undefined)
+					workspace.getBlockById(this._event.blockId).getInput('NEXT').connection.connect(conn);
+		  	}
+			body() {
+				if (this._next.type == "set_model_second" || this._next.type == "set_location") {
+					var idsRes = this._getIdsRes();
+		            
+					this._putList(idsRes);
+
+					return true;
+				}
+				return false;
+			}
+		}
+
+		/*
+		 *
+		 *  НЕ ЗНАЮ НУЖНО ЛИ
+		 *
+		 */
+		class DisconnectBlockSetLocation {
+			constructor(next, event, root, child) {
+				this._next = next;
+				this._event = event;
+				this._root = root;
+				this._child = child;
+			}
+			condition() {
+				return this._next.nextConnection != null
+					&& this._next.nextConnection.targetConnection != null;
+			}
+			calcNext()  {
+				this._next = this._next.nextConnection.targetConnection.getSourceBlock();
+			}
+			calcRoot() {
+				while (this._root != null && this._root.getInputTargetBlock("DO") != this._child) {
+		    		this._child = this._child.getParent();
+		    		this._root = this._child.getParent();
+		    	}
+			}
+			disconnectBlock() {
+				if (workspace.getBlockById(this._event.blockId).type != "block_location") {
+					return;
+				}
+				if (this._root != null && (this._root.type === "model" || this._root.type === "location")) {
+    				console.log('hello-1');
+	    			workspace.getBlockById(this._event.blockId).previousConnection.disconnect();
+	    			return;
+	    		}
+			}
+			body() {
+				if (root != null
+					&& (this._next.type == 'block_location' && (this._root.type == 'location' ||
+					this._root.type == 'model'))) {
+					//console.log(root.type);
+					console.log('hello0');
+					workspace.getBlockById(this._event.blockId).previousConnection.disconnect();
+					return true;
+				}
+				return false;
+			}
+		}
+
 		  Blockly.svgResize(workspace);
 			function myUpdateFunction(event) {
-				var fileAttrs = [
-					"attr_block_path",
-					"attr_block_mimes"
-				];
-				var imageAttrs = [
-					"attr_block_width",
-					"attr_block_height",
-					"attr_block_resize"
-				];
-				var archiveAttrs = [
-					"attr_block_method",
-					"attr_block_ratio",
-					"attr_block_comment",
-					"attr_block_unpacked_size"
-				];
-				var warningAttrs = fileAttrs.concat(imageAttrs).concat(archiveAttrs);
-				var imageAttrs = fileAttrs.concat(imageAttrs);
-				var archiveAttrs = fileAttrs.concat(archiveAttrs);
+				//console.log('myUpdateFunction');
+				//console.log(event);
+				//console.log(workspace.getBlockById(event.blockId));
 				/*if (event.type != Blockly.Events.SELECTED)
 					flagSelected = false;
 				if (event.type == Blockly.Events.SELECTED) {
@@ -214,20 +711,23 @@
 				        }
 				    }
 				}*/
+				//????????????????
 				if (event.type == Blockly.Events.BLOCK_DELETE) {
+					console.log(Object.keys(event.oldJson));
 					console.log("delete");
 					idsRoot = idsRoot.filter(idRoot => {
 						return event.ids.includes(Object.keys(idsRoot)[0]);
 					});
 					idsBlock = idsBlock.filter(idBlock => {
 						console.log(Object.keys(idsBlock)[0]);
+						console.log(Object.keys(event.ids));
 						return event.ids.includes(Object.keys(idsBlock)[0]);
 					});
 					console.log(idsRoot);
 					console.log(idsBlock);
 				}
 				if (event.type == Blockly.Events.BLOCK_CHANGE) {
-					if (workspace.getBlockById(event.blockId) != null
+					/*if (workspace.getBlockById(event.blockId) != null
 						&& workspace.getBlockById(event.blockId).type === "attr_set_id") {
 						console.log("w");
 						var next = workspace.getBlockById(event.blockId);
@@ -296,13 +796,25 @@
 								ids.push(obj);
 								break;
 							}*/
-						}
+					//	}
+					//}
+					if (workspace.getBlockById(event.blockId) != null
+						&& workspace.getBlockById(event.blockId).type === "attr_set_id") {
+						console.log("w");
+						var next = workspace.getBlockById(event.blockId);
+						var handler = new PutSetId(next, event);
+						var recursion = new Skeleton(handler);
+						recursion.recSkeleton();
 					}
 					if (workspace.getBlockById(event.blockId) != null
 						&& workspace.getBlockById(event.blockId).type === "attr_block_id") {
 						console.log("v");
 						var next = workspace.getBlockById(event.blockId);
-						while (next.outputConnection != null && next.outputConnection.targetConnection != null) {
+						var handler = new PutBlockId(next, event);
+						var recursion = new Skeleton(handler);
+						recursion.recSkeleton();
+						console.log(idsBlock);
+						/*while (next.outputConnection != null && next.outputConnection.targetConnection != null) {
 							next = next.outputConnection.targetConnection.getSourceBlock();
 							if (next.type == "block_model") {
 								if (next.previousConnection == null) {
@@ -345,7 +857,7 @@
 								console.log(idsBlock);
 								break;
 							}
-						}
+						}*/
 					}
 					//console.log(ids);
 					if (workspace.getBlockById(event.blockId) != null
@@ -353,78 +865,18 @@
 						var nexts = [];
 						//Blockly.Events.fire(new (Blockly.Events.get(Blockly.Events.BLOCK_MOVE))(workspace.getBlockById(event.blockId)));
 						var next = workspace.getBlockById(event.blockId);
-						while (next.getInputTargetBlock("NEXT") != null) {
-							next = next.getInputTargetBlock("NEXT");
-							//console.log(next.type);
-					    	//console.log(root.type);
-							if (!((workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "file"
-								&& fileAttrs.includes(next.type))
-								|| (workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "image"
-								&& imageAttrs.includes(next.type))
-								|| (workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "archive"
-								&& archiveAttrs.includes(next.type)))
-								&& (!(workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "string"
-									|| workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "number")
-								&& warningAttrs.includes(next.type)
-								|| ((workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "string"
-									|| workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "number") && warningAttrs.includes(next.type)))) {
-								//console.log(root.type);
-								console.log('hello-2.1');
-								//console.log(workspace.getBlockById(event.blockId).getInputTargetBlock('NEXT'));
-								//console.log(workspace.getBlockById(event.blockId));
-								//workspace.getBlockById(event.blockId).inputList[0].connection.disconnect();
-								//console.log(next);
-								//next.outputConnection.disconnect();
-								//next.outputConnection.disconnect();
-								nexts.push(next);
-								
-								/*var prevConn = workspace.getBlockById(event.blockId).previousConnection.targetConnection.getSourceBlock().nextConnection;
-								workspace.getBlockById(event.blockId).previousConnection.disconnect();
-								if (workspace.getBlockById(event.blockId).nextConnection.targetConnection != null) {
-									var nextConn = workspace.getBlockById(event.blockId).nextConnection;
-									workspace.getBlockById(event.blockId).nextConnection.disconnect();
-									prevConn.connect(nextConn);
-								}*/
-								//console.log('hello');
-								//return;
-							}
-						}
+						var handler = new PutBlockType1(next, event, nexts);
+						var recursion = new Skeleton(handler);
+						recursion.recSkeleton();
+						
 						next = workspace.getBlockById(event.blockId);
-						while (next.outputConnection != null && next.outputConnection.targetConnection != null
-							&& next.outputConnection.targetConnection.getSourceBlock().type != "block_model"
-							&& next.outputConnection.targetConnection.getSourceBlock().type != "block_location"
-							&& next.outputConnection.targetConnection.getSourceBlock().type != "set_model_first"
-							&& next.outputConnection.targetConnection.getSourceBlock().type != "set_model_second"
-							&& next.outputConnection.targetConnection.getSourceBlock().type != "set_location") {
-							//console.log('hello');
-							next = next.outputConnection.targetConnection.getSourceBlock();
-							//console.log(next.type);
-					    	//console.log(root.type);
-							if (!((workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "file"
-								&& fileAttrs.includes(next.type))
-								|| (workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "image"
-								&& imageAttrs.includes(next.type))
-								|| (workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "archive"
-								&& archiveAttrs.includes(next.type)))
-								&& (!(workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "string"
-									|| workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "number")
-								&& warningAttrs.includes(next.type)
-								|| ((workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "string"
-									|| workspace.getBlockById(event.blockId).inputList[0].fieldRow[1].getValue() == "number") && warningAttrs.includes(next.type)))) {
-								console.log('hello-2.2');
-								nexts.push(next);
-								//console.log(root.type);
-								/*var prevConn = workspace.getBlockById(event.blockId).previousConnection.targetConnection.getSourceBlock().nextConnection;
-								workspace.getBlockById(event.blockId).previousConnection.disconnect();
-								if (workspace.getBlockById(event.blockId).nextConnection.targetConnection != null) {
-									var nextConn = workspace.getBlockById(event.blockId).nextConnection;
-									workspace.getBlockById(event.blockId).nextConnection.disconnect();
-									prevConn.connect(nextConn);
-								}*/
-								//console.log('hello');
-								//return;
-							}
-						}
+						handler = new PutBlockType2(next, event, nexts);
+						recursion = new Skeleton(handler);
+						recursion.recSkeleton();
+
+						nexts = handler.getNexts();
+						next = handler.getNext();
+
 						console.log(nexts);
 						nexts.forEach((next) => {
 							next.outputConnection.disconnect();
@@ -441,109 +893,9 @@
 					if (workspace.getBlockById(event.blockId) != null
 						&& workspace.getBlockById(event.blockId).type === "attr_block_id") {
 						var next = workspace.getBlockById(event.blockId);
-						while (next.outputConnection != null && next.outputConnection.targetConnection != null) {
-							next = next.outputConnection.targetConnection.getSourceBlock();
-							if (next.type == "block_location") {
-								let child = next.previousConnection.targetConnection.getSourceBlock();
-						    	let root = child.getParent();
-						    	if (child.type === "set_location") {
-						    		root = child;
-						    	}
-						    	else {
-						    		if (root != null) {
-								    	while (root != null && root.getInputTargetBlock("DO") != child) {
-								    		child = child.getParent();
-								    		root = child.getParent();
-								    	}
-								    }
-						    	}
-							    console.log(root);
-								var id;
-								next = root.getInputTargetBlock('ATTRS');
-								var first = true;
-								do {
-									if (!first) {
-										next = next.getInputTargetBlock("NEXT");
-									}
-									first = false;
-									console.log(next);
-									if (next.type === "attr_set_id") {
-										id = next.inputList[0].fieldRow[1].getValue();
-									}
-								} while (next.getInputTargetBlock("NEXT") != null);
-								console.log(id);
-								var idsStr = [];
-								for (var i = 0; i < idsBlock.length; i++) {
-									if (Object.values(idsBlock[i])[0][1] == id) {
-										idsStr.push(Object.values(idsBlock[i])[0][0]);
-									}
-								}
-								console.log(idsStr);
-								console.log(workspace.getBlockById(event.blockId).getField("ID"));
-								//workspace.getBlockById(event.blockId).getField('ID').dispose();
-								//workspace.getBlockById(event.blockId).getField('NEXT').dispose();
-								/*workspace.getBlockById(event.blockId).appendDummyInput().appendField(new Blockly.FieldDropdown(
-							        function () {
-							            var idsRes = [];
-							            for (var i = 0; i < idsStr.length; i++)
-							            	idsRes.push([idsStr[i], idsStr[i]]);
-							            return idsRes;
-							        }
-							    ), 'ID');*/
-							    var idsRes = [];
-					            for (var i = 0; i < idsStr.length; i++)
-					            	idsRes.push([idsStr[i], idsStr[i]]);
-					            if (idsRes.length == 0)
-					            	idsRes = [["",""]];
-					            var conn;
-					            if (workspace.getBlockById(event.blockId).getInputTargetBlock('NEXT') != null)
-					            	conn = workspace.getBlockById(event.blockId).getInputTargetBlock('NEXT')
-					            		.outputConnection;
-					            workspace.getBlockById(event.blockId).getField('ID').dispose();
-					            workspace.getBlockById(event.blockId).removeInput('NEXT', true);
-							    workspace.getBlockById(event.blockId).jsonInit({
-								  "type": "attr_block_id",
-								  "message0": "id of block %1 ----> %2",
-								  "args0": [
-								    {
-								      "type": "field_dropdown",
-								      "name": "ID",
-								      "options": idsRes
-								    },
-								    {
-								      "type": "input_value",
-								      "name": "NEXT",
-								      "check": attr_block
-								    }
-								  ],
-								  "colour": "180",
-								  "output": attr_block
-								  //"output": "attr"
-								});
-								if (conn != undefined)
-									workspace.getBlockById(event.blockId).getInput('NEXT').connection.connect(conn);
-							    //workspace.getBlockById(event.blockId).appendValueInput('NEXT')
-									//.setCheck(attr_set)
-									//.appendField('---->');
-										//.appendField('length of');
-								/*if (!idsStr.includes(event.newValue)) {
-									workspace.getBlockById(event.blockId).setColour(0);
-								}
-								else {
-									workspace.getBlockById(event.blockId).setColour(180);
-								}*/
-								break;
-							}
-							/*else if (next.type == "block_location") {
-								var next2 = next;
-								while (next2.outputConnection == null) {
-									next2 = next.previousConnection.targetConnection.getSourceBlock();
-									if (next2.type == "set_location") {
-
-									}
-								}
-							}*/
-						}
+						var handler = new GetBlockId(next, event);
+						var recursion = new Skeleton(handler);
+						recursion.recSkeleton();
 					}
 					/*if (workspace.getBlockById(event.blockId) != null
 						&& workspace.getBlockById(event.blockId).type === "block_model") {
@@ -585,116 +937,26 @@
 					if (workspace.getBlockById(event.blockId) != null
 						&& workspace.getBlockById(event.blockId).type === "attr_set_id") {
 						var next = workspace.getBlockById(event.blockId);
-						while (next.outputConnection != null && next.outputConnection.targetConnection != null) {
-							next = next.outputConnection.targetConnection.getSourceBlock();
-							if (next.type == "set_model_second" || next.type == "set_location") {
-								var idsStr = [];
-								for (var i = 0; i < idsRoot.length; i++) {
-									idsStr.push(Object.values(idsRoot[i])[0]);
-								}
-								console.log(idsStr);
-								console.log(workspace.getBlockById(event.blockId).getField("ID"));
-								//workspace.getBlockById(event.blockId).getField('ID').dispose();
-								//workspace.getBlockById(event.blockId).getField('NEXT').dispose();
-								/*workspace.getBlockById(event.blockId).appendDummyInput().appendField(new Blockly.FieldDropdown(
-							        function () {
-							            var idsRes = [];
-							            for (var i = 0; i < idsStr.length; i++)
-							            	idsRes.push([idsStr[i], idsStr[i]]);
-							            return idsRes;
-							        }
-							    ), 'ID');*/
-							    var idsRes = [];
-					            for (var i = 0; i < idsStr.length; i++)
-					            	idsRes.push([idsStr[i], idsStr[i]]);
-					            if (idsRes.length == 0)
-					            	idsRes = [["",""]];
-					            var conn;
-					            if (workspace.getBlockById(event.blockId).getInputTargetBlock('NEXT') != null)
-					            	conn = workspace.getBlockById(event.blockId).getInputTargetBlock('NEXT')
-					            		.outputConnection;
-					            workspace.getBlockById(event.blockId).getField('ID').dispose();
-					            workspace.getBlockById(event.blockId).removeInput('NEXT', true);
-							    workspace.getBlockById(event.blockId).jsonInit({
-								  "type": "attr_set_id",
-								  "message0": "id of set %1 ----> %2",
-								  "args0": [
-								    {
-								      "type": "field_dropdown",
-								      "name": "ID",
-								      "options": idsRes
-								    },
-								    {
-								      "type": "input_value",
-								      "name": "NEXT",
-								      "check": attr_set
-								    }
-								  ],
-								  "colour": "180",
-								  "output": attr_set
-								  //"output": "attr"
-								});
-								if (conn != undefined)
-									workspace.getBlockById(event.blockId).getInput('NEXT').connection.connect(conn);
-							    //workspace.getBlockById(event.blockId).appendValueInput('NEXT')
-									//.setCheck(attr_set)
-									//.appendField('---->');
-										//.appendField('length of');
-								/*if (!idsStr.includes(event.newValue)) {
-									workspace.getBlockById(event.blockId).setColour(0);
-								}
-								else {
-									workspace.getBlockById(event.blockId).setColour(180);
-								}*/
-								break;
-							}
-							/*else if (next.type == "block_location") {
-								var next2 = next;
-								while (next2.outputConnection == null) {
-									next2 = next.previousConnection.targetConnection.getSourceBlock();
-									if (next2.type == "set_location") {
-
-									}
-								}
-							}*/
-						}
+						var handler = new GetSetId(next, event);
+						var recursion = new Skeleton(handler);
+						recursion.recSkeleton();
+						
 					}
 					if (workspace.getBlockById(event.blockId) != null
 						&& (workspace.getBlockById(event.blockId).type === "block_location"
 						|| workspace.getBlockById(event.blockId).type === "set_location")) {
-						//console.log('kkk');
-						let child = workspace.getBlockById(event.blockId);
-				    	let root = child.getParent();
-				    	if (root != null) {
-					    	while (root != null && root.getInputTargetBlock("DO") != child) {
-					    		child = child.getParent();
-					    		root = child.getParent();
-					    	}
-				    		if (workspace.getBlockById(event.blockId).type === "block_location") {
-				    			if (root != null && (root.type === "model" || root.type === "location")) {
-				    				console.log('hello-1');
-					    			workspace.getBlockById(event.blockId).previousConnection.disconnect();
-					    			return;
+							let child = workspace.getBlockById(event.blockId);
+					    	let root = child.getParent();
+					    	var next = workspace.getBlockById(event.blockId);
+					    	var handler = new DisconnectBlockSetLocation(next, event, root, child);
+					    	if (root != null) {
+						    	handler.calcRoot();
+					    		handler.disconnectBlock();
+					    		if (workspace.getBlockById(event.blockId).type === "set_location") {
+					    			var recursion = new Skeleton(handler);
+									recursion.recSkeleton();
 					    		}
-				    		}
-				    		if (workspace.getBlockById(event.blockId).type === "set_location") {
-				    			//console.log('hello');
-				    			var next = workspace.getBlockById(event.blockId);
-				    			while (next.nextConnection != null && next.nextConnection.targetConnection != null) {
-									next = next.nextConnection.targetConnection.getSourceBlock();
-									//console.log(next.type);
-							    	//console.log(root.type);
-									if (root != null
-										&& (next.type == 'block_location' && (root.type == 'location' ||
-										root.type == 'model'))) {
-										//console.log(root.type);
-										console.log('hello0');
-										workspace.getBlockById(event.blockId).previousConnection.disconnect();
-										return;
-									}
-								}
-				    		}
-				    	}
+					    	}
 					    	/*let root = workspace.getBlockById(event.blockId).getParent();
 					    	while (root.type !== "group" && root.type !== "model" && root.type !== "location") {
 					    		root = root.getParent();
@@ -962,6 +1224,16 @@
 			  document.getElementById('textarea').value = code;
 			}
 			workspace.addChangeListener(myUpdateFunction);
+		</script>
+		<!-- скрипт со спецификацией (describe, it...) -->
+		<script src="test.js"></script>
+
+		<!-- элемент с id="mocha" будет содержать результаты тестов -->
+		<div id="mocha"></div>
+
+		<!-- запускаем тесты! -->
+		<script>
+		  mocha.run();
 		</script>
 	</body>
 </html>

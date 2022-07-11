@@ -654,6 +654,28 @@ const blocks = Blockly.common.createBlockDefinitionsFromJsonArray([/*{
   "nextStatement": ["block_model"],
   "previousStatement": ["set_model_second", "block_model"],
   "colour": 50
+},
+{
+  "type": "block_location",
+  "message0": "block location",
+  "message1": "name \" %1 \"",
+  "args1": [
+    {
+      "type": "field_input",
+      "name": "NAME"
+    }
+  ],
+  "message2": "attrs %1",
+  "args2": [
+    {
+      "type": "input_value",
+      "name": "ATTRS",
+      "check": attr_block
+    }
+  ],
+  "nextStatement": ["block_location","set_location"],
+  "previousStatement": ["block_location","set_location"],
+  "colour": 50
 }
 /*,
 {
@@ -689,7 +711,7 @@ const blocks = Blockly.common.createBlockDefinitionsFromJsonArray([/*{
   "colour": 50
 },*/
 
-blocks['block_location'] = {
+/*blocks['block_location'] = {
   init: function() {
     this.jsonInit({
       "type": "block_location",
@@ -713,7 +735,7 @@ blocks['block_location'] = {
           "name": "DO",
           "check": ["block_location","set_location"]
         }*/
-      ],
+      /*],
       //"output": "block",
       "nextStatement": ["block_location","set_location"],
       "previousStatement": ["block_location","set_location"],
@@ -751,7 +773,7 @@ blocks['block_location'] = {
       }
     }*/
   //}
-};
+//};
 
 Blockly.common.defineBlocks(blocks);
 
